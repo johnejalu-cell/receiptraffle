@@ -13,18 +13,32 @@ export default function SignupPage() {
 
   async function handleSignup() {
     setLoading(true)
+    setMessage('')
+
+    if (!fullName || !email || !password) {
+      setMessage('Please fill in all fields')
+      setLoading(false)
+      return
+    }
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
+
     const { error } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { full_name: fullName, role } }
+      email,
+      password,
+      options: {
+        data: { full_name: fullName, role },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      }
     })
+
     if (error) {
       setMessage(error.message)
     } else {
-      setMessage('Account created! Please check your email to confirm.')
+      setMessage('Account created! Please check your email to confirm your account.')
     }
     setLoading(false)
   }
@@ -41,7 +55,11 @@ export default function SignupPage() {
             </button>
           ))}
         </div>
-        {message && <div style={{ background: message.includes('created') ? '#E1F5EE' : '#FCEBEB', color: message.includes('created') ? '#085041' : '#791F1F', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{message}</div>}
+        {message && (
+          <div style={{ background: message.includes('created') ? '#E1F5EE' : '#FCEBEB', color: message.includes('created') ? '#085041' : '#791F1F', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>
+            {message}
+          </div>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
             <label style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4 }}>Full name</label>
