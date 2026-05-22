@@ -10,18 +10,18 @@ const PROMOTIONS = [
     draws: "30 Jun 2025",
     entries: "1,842",
     color: "#1D9E75",
-    emoji: "🛒"
+    icon: "🛒"
   },
   {
     id: 2,
     title: "Back-to-School Win Big",
     brand: "EduMart Uganda",
-    prize: "Laptop × 2",
+    prize: "Laptop x 2",
     minSpend: "UGX 150,000",
     draws: "15 Jun 2025",
     entries: "3,204",
     color: "#534AB7",
-    emoji: "🎒"
+    icon: "🎒"
   },
   {
     id: 3,
@@ -32,68 +32,117 @@ const PROMOTIONS = [
     draws: "31 Jul 2025",
     entries: "411",
     color: "#854F0B",
-    emoji: "🏨"
+    icon: "🏨"
   },
 ]
 
 export default function Home() {
   return (
     <main style={{ minHeight: '100vh', background: '#fafaf9' }}>
+
       {/* Header */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 36, height: 36, background: '#1D9E75', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🧾</div>
-          <span style={{ fontSize: 18, fontWeight: 700 }}>Receipt<span style={{ color: '#1D9E75' }}>Raffle</span></span>
+      <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '0.75rem 1.5rem 1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+          <Link href="/auth/login" style={{ fontSize: 12, color: '#534AB7', fontWeight: 600, textDecoration: 'none' }}>
+            Business login
+          </Link>
         </div>
-        <Link href="/auth/login" style={{ fontSize: 13, color: '#534AB7', fontWeight: 600, textDecoration: 'none' }}>
-          Business login →
-        </Link>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 6 }}>
+            <div style={{ width: 58, height: 58, background: '#1D9E75', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>
+              &#x1F9FE;
+            </div>
+            <span style={{ fontSize: 42, fontWeight: 900, letterSpacing: -2, lineHeight: 1 }}>
+              Receipt<span style={{ color: '#1D9E75' }}>Raffle</span>
+            </span>
+          </div>
+          <p style={{ fontSize: 14, color: '#999', margin: 0, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 500 }}>
+            Shop &middot; Upload &middot; Win
+          </p>
+        </div>
       </div>
 
       {/* Hero */}
-      <div style={{ textAlign: 'center', padding: '2.5rem 1.5rem 1.5rem' }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8, letterSpacing: -0.5 }}>
-          Shop. Upload. <span style={{ color: '#1D9E75' }}>Win.</span>
+      <div style={{ textAlign: 'center', padding: '2rem 1.5rem 1.5rem' }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, letterSpacing: -0.5 }}>
+          Upload your receipt.<br />
+          <span style={{ color: '#1D9E75' }}>Enter to win big.</span>
         </h1>
-        <p style={{ fontSize: 15, color: '#666', maxWidth: 340, margin: '0 auto' }}>
-          Upload your receipt from any active promotion below and enter to win amazing prizes.
+        <p style={{ fontSize: 14, color: '#666', maxWidth: 320, margin: '0 auto 1.5rem' }}>
+          Pick a promotion below, upload your receipt and you could win amazing prizes!
         </p>
+
+        {/* How it works */}
+        <div style={{ display: 'flex', justifyContent: 'center', maxWidth: 360, margin: '0 auto 1.5rem' }}>
+          {[
+            { label: 'Shop', icon: '&#x1F6CD;' },
+            { arrow: true },
+            { label: 'Upload', icon: '&#x1F4F8;' },
+            { arrow: true },
+            { label: 'AI checks', icon: '&#x1F916;' },
+            { arrow: true },
+            { label: "You're in!", icon: '&#x1F39F;' },
+          ].map((s: any, i) => (
+            s.arrow
+              ? <div key={i} style={{ color: '#ccc', fontSize: 14, display: 'flex', alignItems: 'center', padding: '0 2px', marginBottom: 16 }}>&rarr;</div>
+              : <div key={i} style={{ textAlign: 'center', flex: 1 }}>
+                  <div style={{ fontSize: 22, marginBottom: 4 }} dangerouslySetInnerHTML={{ __html: s.icon }} />
+                  <div style={{ fontSize: 10, color: '#888', fontWeight: 600 }}>{s.label}</div>
+                </div>
+          ))}
+        </div>
+
+        {/* AI badge */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: '#E8F8F2', border: '1.5px solid #9FE1CB', borderRadius: 14, padding: '14px 20px', maxWidth: 360, width: '100%' }}>
+          <span style={{ fontSize: 28, flexShrink: 0 }}>&#x26A1;</span>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#085041', marginBottom: 2 }}>Instant AI receipt scanning</div>
+            <div style={{ fontSize: 12, color: '#0F6E56', lineHeight: 1.4 }}>Your receipt is read and verified in seconds by Claude AI &mdash; no waiting, no manual checks.</div>
+          </div>
+          <div style={{ background: '#1D9E75', borderRadius: 20, padding: '3px 10px', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>LIVE</div>
+        </div>
       </div>
 
       {/* Promotions */}
       <div style={{ padding: '0 1rem 2rem', maxWidth: 500, margin: '0 auto' }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
           Active promotions
         </p>
         {PROMOTIONS.map(p => (
           <Link key={p.id} href={`/enter/${p.id}`} style={{ textDecoration: 'none' }}>
             <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 12, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-              <div style={{ width: 48, height: 48, background: p.color + '20', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
-                {p.emoji}
+              <div style={{ width: 50, height: 50, background: p.color + '18', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>
+                {p.icon}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 2, color: '#1a1a18' }}>{p.title}</div>
-                <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>{p.brand}</div>
-                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 12, color: '#666' }}>🏆 <strong style={{ color: '#1a1a18' }}>{p.prize}</strong></div>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2, color: '#1a1a18' }}>{p.title}</div>
+                <div style={{ fontSize: 13, color: '#888', marginBottom: 8 }}>{p.brand}</div>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, color: '#666' }}>&#x1F3C6; <strong style={{ color: '#1a1a18' }}>{p.prize}</strong></div>
                   <div style={{ fontSize: 12, color: '#666' }}>Min: <strong style={{ color: '#1a1a18' }}>{p.minSpend}</strong></div>
                 </div>
-                <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
-                  <div style={{ fontSize: 11, color: '#999' }}>📅 Draw: {p.draws}</div>
-                  <div style={{ fontSize: 11, color: '#999' }}>🎟 {p.entries} entries</div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ fontSize: 11, color: '#aaa' }}>Draw: {p.draws}</div>
+                  <div style={{ fontSize: 11, color: '#aaa' }}>{p.entries} entries</div>
                 </div>
               </div>
-              <div style={{ color: p.color, fontSize: 20, flexShrink: 0 }}>›</div>
+              <div style={{ color: p.color, fontSize: 22, flexShrink: 0, marginTop: 4 }}>&rsaquo;</div>
             </div>
           </Link>
         ))}
 
         {/* For businesses */}
-        <div style={{ background: '#EEEDFE', borderRadius: 14, padding: '1.25rem', marginTop: 8, textAlign: 'center' }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: '#3C3489', marginBottom: 4 }}>Are you a business?</div>
-          <div style={{ fontSize: 13, color: '#534AB7', marginBottom: 12 }}>Launch your own prize promotion in minutes</div>
-          <Link href="/auth/signup?role=promoter" style={{ display: 'inline-block', padding: '9px 24px', background: '#534AB7', color: '#fff', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-            Launch a promotion →
+        <div style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderRadius: 14, padding: '1.5rem', marginTop: 8, textAlign: 'center' }}>
+          <div style={{ fontSize: 22, marginBottom: 8 }}>&#x1F3E2;</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>Are you a business?</div>
+          <div style={{ fontSize: 13, color: '#9BA4B5', marginBottom: 12 }}>Launch your own AI-powered prize promotion</div>
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: '#9BA4B5' }}>&#x2713; AI receipt scanning</div>
+            <div style={{ fontSize: 12, color: '#9BA4B5' }}>&#x2713; Fraud detection</div>
+            <div style={{ fontSize: 12, color: '#9BA4B5' }}>&#x2713; Tamper-proof draws</div>
+          </div>
+          <Link href="/launch" style={{ display: 'inline-block', padding: '11px 28px', background: '#1D9E75', color: '#fff', borderRadius: 8, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+            Launch a promotion &rarr;
           </Link>
         </div>
       </div>
