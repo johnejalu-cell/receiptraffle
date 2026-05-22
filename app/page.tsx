@@ -1,81 +1,34 @@
 import Link from 'next/link'
 
 const PROMOTIONS = [
-  {
-    id: 1,
-    title: "Summer Braai Bonanza",
-    brand: "FreshMart Supermarkets",
-    prize: "UGX 5,000,000 cash",
-    minSpend: "UGX 300,000",
-    draws: "30 Jun 2025",
-    entries: "1,842",
-    color: "#1D9E75",
-    icon: "🛒"
-  },
-  {
-    id: 2,
-    title: "Back-to-School Win Big",
-    brand: "EduMart Uganda",
-    prize: "Laptop x 2",
-    minSpend: "UGX 150,000",
-    draws: "15 Jun 2025",
-    entries: "3,204",
-    color: "#534AB7",
-    icon: "🎒"
-  },
-  {
-    id: 3,
-    title: "Family Pack Jackpot",
-    brand: "CityLodge Hotels",
-    prize: "Weekend stay for 4",
-    minSpend: "UGX 500,000",
-    draws: "31 Jul 2025",
-    entries: "411",
-    color: "#854F0B",
-    icon: "🏨"
-  },
+  { id: 1, title: "Summer Braai Bonanza", brand: "FreshMart Supermarkets", prize: "UGX 5,000,000 cash", minSpend: "UGX 300,000", draws: "30 Jun 2025", entries: "1,842", color: "#1D9E75", icon: "🛒" },
+  { id: 2, title: "Back-to-School Win Big", brand: "EduMart Uganda", prize: "Laptop x 2", minSpend: "UGX 150,000", draws: "15 Jun 2025", entries: "3,204", color: "#534AB7", icon: "🎒" },
+  { id: 3, title: "Family Pack Jackpot", brand: "CityLodge Hotels", prize: "Weekend stay for 4", minSpend: "UGX 500,000", draws: "31 Jul 2025", entries: "411", color: "#854F0B", icon: "🏨" },
 ]
 
 export default function Home() {
   return (
     <main style={{ minHeight: '100vh', background: '#fafaf9' }}>
-
-      {/* Header — no business login link */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '1.25rem 1.5rem' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 6 }}>
-            <div style={{ width: 58, height: 58, background: '#1D9E75', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>
-              &#x1F9FE;
-            </div>
-            <span style={{ fontSize: 42, fontWeight: 900, letterSpacing: -2, lineHeight: 1 }}>
-              Receipt<span style={{ color: '#1D9E75' }}>Raffle</span>
-            </span>
-          </div>
-          <p style={{ fontSize: 14, color: '#999', margin: 0, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 500 }}>
-            Shop &middot; Upload &middot; Win
-          </p>
+      {/* Header */}
+      <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '1.25rem 1.5rem', textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 6 }}>
+          <div style={{ width: 58, height: 58, background: '#1D9E75', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>&#x1F9FE;</div>
+          <span style={{ fontSize: 42, fontWeight: 900, letterSpacing: -2, lineHeight: 1 }}>Receipt<span style={{ color: '#1D9E75' }}>Raffle</span></span>
         </div>
+        <p style={{ fontSize: 14, color: '#999', margin: 0, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 500 }}>Shop &middot; Upload &middot; Win</p>
       </div>
 
       {/* Hero */}
       <div style={{ textAlign: 'center', padding: '2rem 1.5rem 1.5rem' }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, letterSpacing: -0.5 }}>
-          Upload your receipt.<br />
-          <span style={{ color: '#1D9E75' }}>Enter to win big.</span>
-        </h1>
-        <p style={{ fontSize: 14, color: '#666', maxWidth: 320, margin: '0 auto 1.5rem' }}>
-          Pick a promotion below, upload your receipt and you could win amazing prizes!
-        </p>
+        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, letterSpacing: -0.5 }}>Upload your receipt.<br /><span style={{ color: '#1D9E75' }}>Enter to win big.</span></h1>
+        <p style={{ fontSize: 14, color: '#666', maxWidth: 320, margin: '0 auto 1.5rem' }}>Pick a promotion below, upload your receipt and you could win amazing prizes!</p>
 
         {/* How it works */}
         <div style={{ display: 'flex', justifyContent: 'center', maxWidth: 360, margin: '0 auto 1.5rem' }}>
           {[
-            { label: 'Shop', icon: '&#x1F6CD;' },
-            { arrow: true },
-            { label: 'Upload', icon: '&#x1F4F8;' },
-            { arrow: true },
-            { label: 'AI checks', icon: '&#x1F916;' },
-            { arrow: true },
+            { label: 'Shop', icon: '&#x1F6CD;' }, { arrow: true },
+            { label: 'Upload', icon: '&#x1F4F8;' }, { arrow: true },
+            { label: 'AI checks', icon: '&#x1F916;' }, { arrow: true },
             { label: "You're in!", icon: '&#x1F39F;' },
           ].map((s: any, i) => (
             s.arrow
@@ -92,7 +45,7 @@ export default function Home() {
           <span style={{ fontSize: 28, flexShrink: 0 }}>&#x26A1;</span>
           <div style={{ textAlign: 'left' }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#085041', marginBottom: 2 }}>Instant AI receipt scanning</div>
-            <div style={{ fontSize: 12, color: '#0F6E56', lineHeight: 1.4 }}>Your receipt is read and verified in seconds by Claude AI &mdash; no waiting, no manual checks.</div>
+            <div style={{ fontSize: 12, color: '#0F6E56', lineHeight: 1.4 }}>Read and verified in seconds by Claude AI &mdash; no waiting, no manual checks.</div>
           </div>
           <div style={{ background: '#1D9E75', borderRadius: 20, padding: '3px 10px', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>LIVE</div>
         </div>
@@ -100,15 +53,11 @@ export default function Home() {
 
       {/* Promotions */}
       <div style={{ padding: '0 1rem 2rem', maxWidth: 500, margin: '0 auto' }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
-          Active promotions
-        </p>
+        <p style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>Active promotions</p>
         {PROMOTIONS.map(p => (
           <Link key={p.id} href={`/enter/${p.id}`} style={{ textDecoration: 'none' }}>
             <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 12, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-              <div style={{ width: 50, height: 50, background: p.color + '18', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>
-                {p.icon}
-              </div>
+              <div style={{ width: 50, height: 50, background: p.color + '18', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>{p.icon}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2, color: '#1a1a18' }}>{p.title}</div>
                 <div style={{ fontSize: 13, color: '#888', marginBottom: 8 }}>{p.brand}</div>
@@ -126,20 +75,20 @@ export default function Home() {
           </Link>
         ))}
 
-        {/* For businesses — links to /launch */}
+        {/* For businesses */}
         <div style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderRadius: 14, padding: '1.5rem', marginTop: 8, textAlign: 'center' }}>
-          <div style={{ fontSize: 22, marginBottom: 8 }}>&#x1F3E2;</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>Are you a business?</div>
-          <div style={{ fontSize: 13, color: '#9BA4B5', marginBottom: 12 }}>Launch your own AI-powered prize promotion</div>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
-            <div style={{ fontSize: 12, color: '#9BA4B5' }}>&#x2713; AI receipt scanning</div>
-            <div style={{ fontSize: 12, color: '#9BA4B5' }}>&#x2713; Fraud detection</div>
-            <div style={{ fontSize: 12, color: '#9BA4B5' }}>&#x2713; Tamper-proof draws</div>
-          </div>
+          <div style={{ fontSize: 13, color: '#9BA4B5', marginBottom: 4 }}>Launch your own AI-powered prize promotion</div>
+          <Link href="/for-business" style={{ fontSize: 12, color: '#1D9E75', textDecoration: 'none', display: 'block', marginBottom: 16 }}>Learn more &rarr;</Link>
           <Link href="/launch" style={{ display: 'inline-block', padding: '11px 28px', background: '#1D9E75', color: '#fff', borderRadius: 8, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
             Launch a promotion &rarr;
           </Link>
         </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ borderTop: '1px solid #e5e5e0', padding: '1.25rem', textAlign: 'center' }}>
+        <Link href="/admin" style={{ fontSize: 11, color: '#ddd', textDecoration: 'none' }}>Admin</Link>
       </div>
     </main>
   )
