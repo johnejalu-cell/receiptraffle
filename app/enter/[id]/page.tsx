@@ -41,26 +41,26 @@ export default function Home() {
     <main style={{ minHeight: '100vh', background: '#fafaf9' }}>
 
       {/* Header */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '1.5rem 1.5rem 1rem' }}>
-        {/* Business link — top right, clear of logo */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+      <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '0.75rem 1.5rem 1.25rem' }}>
+        {/* Business link — own line, top right */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
           <Link href="/auth/login" style={{ fontSize: 12, color: '#534AB7', fontWeight: 600, textDecoration: 'none' }}>
             Business login →
           </Link>
         </div>
-        {/* Centered brand */}
+        {/* Big centered brand */}
         <div style={{ textAlign: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 4 }}>
-            <div style={{ width: 48, height: 48, background: '#1D9E75', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🧾</div>
-            <span style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1 }}>Receipt<span style={{ color: '#1D9E75' }}>Raffle</span></span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 6 }}>
+            <div style={{ width: 58, height: 58, background: '#1D9E75', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>🧾</div>
+            <span style={{ fontSize: 42, fontWeight: 900, letterSpacing: -2, lineHeight: 1 }}>Receipt<span style={{ color: '#1D9E75' }}>Raffle</span></span>
           </div>
-          <p style={{ fontSize: 13, color: '#999', margin: 0 }}>Shop. Upload. Win.</p>
+          <p style={{ fontSize: 14, color: '#999', margin: 0, letterSpacing: 1, textTransform: 'uppercase', fontWeight: 500 }}>Shop · Upload · Win</p>
         </div>
       </div>
 
       {/* Hero */}
       <div style={{ textAlign: 'center', padding: '2rem 1.5rem 1.5rem' }}>
-        <h1 style={{ fontSize: 26, fontWeight: 700, marginBottom: 8, letterSpacing: -0.5 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, letterSpacing: -0.5 }}>
           Upload your receipt.<br /><span style={{ color: '#1D9E75' }}>Enter to win big.</span>
         </h1>
         <p style={{ fontSize: 14, color: '#666', maxWidth: 320, margin: '0 auto 1.5rem' }}>
@@ -68,7 +68,7 @@ export default function Home() {
         </p>
 
         {/* How it works */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 0, maxWidth: 360, margin: '0 auto 1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', maxWidth: 360, margin: '0 auto 1.5rem' }}>
           {[
             { emoji: '🛍️', label: 'Shop' },
             { arrow: true },
@@ -87,12 +87,12 @@ export default function Home() {
           ))}
         </div>
 
-        {/* AI scanning — elevated, single mention */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderRadius: 14, padding: '14px 20px', maxWidth: 360, width: '100%' }}>
+        {/* AI badge — light colour */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: '#E8F8F2', border: '1.5px solid #9FE1CB', borderRadius: 14, padding: '14px 20px', maxWidth: 360, width: '100%' }}>
           <span style={{ fontSize: 28, flexShrink: 0 }}>⚡</span>
           <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 2 }}>Instant AI receipt scanning</div>
-            <div style={{ fontSize: 12, color: '#9BA4B5', lineHeight: 1.4 }}>Your receipt is read and verified in seconds by Claude AI — no waiting, no manual checks.</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#085041', marginBottom: 2 }}>Instant AI receipt scanning</div>
+            <div style={{ fontSize: 12, color: '#0F6E56', lineHeight: 1.4 }}>Your receipt is read and verified in seconds by Claude AI — no waiting, no manual checks.</div>
           </div>
           <div style={{ background: '#1D9E75', borderRadius: 20, padding: '3px 10px', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>LIVE</div>
         </div>
