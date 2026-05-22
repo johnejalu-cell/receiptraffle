@@ -40,13 +40,8 @@ export default function Home() {
   return (
     <main style={{ minHeight: '100vh', background: '#fafaf9' }}>
 
-      {/* Header */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '0.75rem 1.5rem 1.25rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
-          <Link href="/auth/login" style={{ fontSize: 12, color: '#534AB7', fontWeight: 600, textDecoration: 'none' }}>
-            Business login
-          </Link>
-        </div>
+      {/* Header — no business login link */}
+      <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '1.25rem 1.5rem' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 6 }}>
             <div style={{ width: 58, height: 58, background: '#1D9E75', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>
@@ -131,7 +126,7 @@ export default function Home() {
           </Link>
         ))}
 
-        {/* For businesses */}
+        {/* For businesses — links to /launch */}
         <div style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderRadius: 14, padding: '1.5rem', marginTop: 8, textAlign: 'center' }}>
           <div style={{ fontSize: 22, marginBottom: 8 }}>&#x1F3E2;</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>Are you a business?</div>
