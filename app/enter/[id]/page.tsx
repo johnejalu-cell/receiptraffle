@@ -41,15 +41,21 @@ export default function Home() {
     <main style={{ minHeight: '100vh', background: '#fafaf9' }}>
 
       {/* Header */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '1.5rem 1.5rem 1.25rem', textAlign: 'center', position: 'relative' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 4 }}>
-          <div style={{ width: 48, height: 48, background: '#1D9E75', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🧾</div>
-          <span style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1 }}>Receipt<span style={{ color: '#1D9E75' }}>Raffle</span></span>
+      <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '1.5rem 1.5rem 1rem' }}>
+        {/* Business link — top right, clear of logo */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+          <Link href="/auth/login" style={{ fontSize: 12, color: '#534AB7', fontWeight: 600, textDecoration: 'none' }}>
+            Business login →
+          </Link>
         </div>
-        <p style={{ fontSize: 13, color: '#999', margin: 0 }}>Shop. Upload. Win.</p>
-        <Link href="/auth/login" style={{ position: 'absolute', top: '50%', right: '1.5rem', transform: 'translateY(-50%)', fontSize: 12, color: '#534AB7', fontWeight: 600, textDecoration: 'none' }}>
-          Business →
-        </Link>
+        {/* Centered brand */}
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 4 }}>
+            <div style={{ width: 48, height: 48, background: '#1D9E75', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>🧾</div>
+            <span style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1 }}>Receipt<span style={{ color: '#1D9E75' }}>Raffle</span></span>
+          </div>
+          <p style={{ fontSize: 13, color: '#999', margin: 0 }}>Shop. Upload. Win.</p>
+        </div>
       </div>
 
       {/* Hero */}
@@ -61,27 +67,17 @@ export default function Home() {
           Pick a promotion below, upload your receipt and you could win amazing prizes!
         </p>
 
-        {/* AI badge */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderRadius: 30, padding: '10px 20px', marginBottom: '0.5rem' }}>
-          <span style={{ fontSize: 18 }}>🤖</span>
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>AI-Powered Verification</div>
-            <div style={{ fontSize: 11, color: '#9BA4B5' }}>Receipts verified instantly by AI</div>
-          </div>
-          <div style={{ background: '#1D9E75', borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700, color: '#fff', marginLeft: 4 }}>LIVE</div>
-        </div>
-
         {/* How it works */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 0, marginTop: '1.25rem', maxWidth: 360, margin: '1.25rem auto 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 0, maxWidth: 360, margin: '0 auto 1.5rem' }}>
           {[
             { emoji: '🛍️', label: 'Shop' },
-            { emoji: '→', label: '', arrow: true },
+            { arrow: true },
             { emoji: '📸', label: 'Upload' },
-            { emoji: '→', label: '', arrow: true },
+            { arrow: true },
             { emoji: '🤖', label: 'AI checks' },
-            { emoji: '→', label: '', arrow: true },
-            { emoji: '🎟', label: 'You\'re in!' },
-          ].map((s, i) => (
+            { arrow: true },
+            { emoji: '🎟', label: "You're in!" },
+          ].map((s: any, i) => (
             s.arrow
               ? <div key={i} style={{ color: '#ccc', fontSize: 14, display: 'flex', alignItems: 'center', padding: '0 2px', marginBottom: 16 }}>→</div>
               : <div key={i} style={{ textAlign: 'center', flex: 1 }}>
@@ -90,14 +86,15 @@ export default function Home() {
                 </div>
           ))}
         </div>
-      </div>
 
-      {/* AI trust strip */}
-      <div style={{ background: 'linear-gradient(135deg, #E8F8F2, #E6F1FB)', margin: '0 1rem 1.25rem', borderRadius: 12, padding: '12px 16px', display: 'flex', gap: 16, alignItems: 'center' }}>
-        <div style={{ fontSize: 28, flexShrink: 0 }}>⚡</div>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a18', marginBottom: 2 }}>Instant AI receipt scanning</div>
-          <div style={{ fontSize: 12, color: '#555', lineHeight: 1.5 }}>Our AI reads your receipt in seconds — no manual checking, no waiting. Powered by Claude AI.</div>
+        {/* AI scanning — elevated, single mention */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderRadius: 14, padding: '14px 20px', maxWidth: 360, width: '100%' }}>
+          <span style={{ fontSize: 28, flexShrink: 0 }}>⚡</span>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 2 }}>Instant AI receipt scanning</div>
+            <div style={{ fontSize: 12, color: '#9BA4B5', lineHeight: 1.4 }}>Your receipt is read and verified in seconds by Claude AI — no waiting, no manual checks.</div>
+          </div>
+          <div style={{ background: '#1D9E75', borderRadius: 20, padding: '3px 10px', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>LIVE</div>
         </div>
       </div>
 
@@ -133,12 +130,9 @@ export default function Home() {
         <div style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderRadius: 14, padding: '1.5rem', marginTop: 8, textAlign: 'center' }}>
           <div style={{ fontSize: 22, marginBottom: 8 }}>🏢</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>Are you a business?</div>
-          <div style={{ fontSize: 13, color: '#9BA4B5', marginBottom: 6 }}>Launch your own AI-powered prize promotion</div>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: 13, color: '#9BA4B5', marginBottom: 12 }}>Launch your own AI-powered prize promotion</div>
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
             <div style={{ fontSize: 12, color: '#9BA4B5' }}>✓ AI receipt scanning</div>
-            <div style={{ fontSize: 12, color: '#9BA4B5' }}>✓ Instant verification</div>
-          </div>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 16 }}>
             <div style={{ fontSize: 12, color: '#9BA4B5' }}>✓ Fraud detection</div>
             <div style={{ fontSize: 12, color: '#9BA4B5' }}>✓ Tamper-proof draws</div>
           </div>
