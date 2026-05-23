@@ -75,7 +75,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#fafaf9', textAlign: 'center' }}>
       <div style={{ fontSize: 56, marginBottom: 16 }}>&#x1F389;</div>
       <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: '#1D9E75' }}>You're entered!</h2>
-      <p style={{ color: '#666', fontSize: 15, marginBottom: 20 }}>Your receipt was verified successfully. Good luck!</p>
+      <p style={{ color: '#666', fontSize: 15, marginBottom: 20 }}>Your receipt was verified. Good luck!</p>
       <div style={{ background: '#fff', border: '2px solid #1D9E75', borderRadius: 14, padding: '1.5rem', width: '100%', maxWidth: 340, marginBottom: 20 }}>
         <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Your ticket number</div>
         <div style={{ fontSize: 22, fontWeight: 700, color: '#1D9E75', letterSpacing: 1 }}>{ticket}</div>
@@ -118,7 +118,6 @@ export default function EnterPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
-      {/* Step indicator */}
       <div style={{ background: '#fff', padding: '0.75rem 1.5rem', borderBottom: '1px solid #e5e5e0', display: 'flex' }}>
         {['Upload receipt', 'Your details'].map((s, i) => (
           <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 12, fontWeight: 600,
@@ -132,7 +131,6 @@ export default function EnterPage({ params }: { params: { id: string } }) {
 
       <div style={{ padding: '1.5rem 1rem', maxWidth: 480, margin: '0 auto' }}>
 
-        {/* Promo summary */}
         <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 12, padding: '1rem', marginBottom: 20, display: 'flex', gap: 12, alignItems: 'center' }}>
           <div style={{ fontSize: 28 }}>{promo.icon}</div>
           <div>
@@ -144,26 +142,36 @@ export default function EnterPage({ params }: { params: { id: string } }) {
         {step === 'upload' && (
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Upload your receipt</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
-              Take a clear photo of your receipt or select an image from your gallery.
-            </p>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Take a photo of your receipt or choose an image from your phone.</p>
 
             {!preview ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {/* Single universal upload button — works on all devices */}
+
+                {/* Camera button — opens camera directly */}
                 <label style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  border: '2px dashed #1D9E75', borderRadius: 14, padding: '2.5rem 1rem',
-                  textAlign: 'center', cursor: 'pointer', background: '#E8F8F2'
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                  padding: '18px', background: '#1D9E75', color: '#fff',
+                  borderRadius: 12, cursor: 'pointer', fontSize: 16, fontWeight: 700
                 }}>
-                  <div style={{ fontSize: 52, marginBottom: 12 }}>&#x1F4F7;</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#085041', marginBottom: 6 }}>
-                    Tap here to upload your receipt
-                  </div>
-                  <div style={{ fontSize: 13, color: '#0F6E56' }}>
-                    Take a photo or choose from your gallery
-                  </div>
-                  {/* No capture attribute — lets the phone show its own menu with camera + gallery options */}
+                  <span style={{ fontSize: 24 }}>&#x1F4F7;</span>
+                  Take a photo now
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+
+                {/* Gallery button — opens file browser */}
+                <label style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                  padding: '18px', background: '#fff', color: '#1a1a18',
+                  border: '1.5px solid #d0d0c8', borderRadius: 12, cursor: 'pointer', fontSize: 16, fontWeight: 600
+                }}>
+                  <span style={{ fontSize: 24 }}>&#x1F5BC;</span>
+                  Choose from gallery
                   <input
                     type="file"
                     accept="image/*,application/pdf"
@@ -172,15 +180,15 @@ export default function EnterPage({ params }: { params: { id: string } }) {
                   />
                 </label>
 
-                <div style={{ textAlign: 'center', fontSize: 12, color: '#999' }}>
-                  Supported: JPG, PNG, PDF &mdash; max 10MB
+                <div style={{ textAlign: 'center', fontSize: 12, color: '#bbb' }}>
+                  JPG, PNG or PDF &mdash; max 10MB
                 </div>
               </div>
             ) : (
               <div>
                 {preview !== 'pdf' ? (
                   <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #1D9E75', maxHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f0', marginBottom: 12 }}>
-                    <img src={preview} alt="Receipt preview" style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain' }} />
+                    <img src={preview} alt="Receipt" style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain' }} />
                   </div>
                 ) : (
                   <div style={{ borderRadius: 14, border: '2px solid #1D9E75', padding: '2rem', textAlign: 'center', background: '#E8F8F2', marginBottom: 12 }}>
@@ -188,15 +196,13 @@ export default function EnterPage({ params }: { params: { id: string } }) {
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{file?.name}</div>
                   </div>
                 )}
-
-                <div style={{ background: '#E8F8F2', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#085041', fontWeight: 600, marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ background: '#E8F8F2', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#085041', fontWeight: 600, marginBottom: 14, display: 'flex', justifyContent: 'space-between' }}>
                   <span>&#x2713; Receipt uploaded</span>
                   <label style={{ fontSize: 12, color: '#0F6E56', cursor: 'pointer', textDecoration: 'underline' }}>
                     Change
                     <input type="file" accept="image/*,application/pdf" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} style={{ display: 'none' }} />
                   </label>
                 </div>
-
                 <button onClick={() => setStep('details')} style={{ width: '100%', padding: '14px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
                   Continue &#x2192;
                 </button>
@@ -225,13 +231,11 @@ export default function EnterPage({ params }: { params: { id: string } }) {
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="For winner notification"
                   style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
               </div>
-
               <div style={{ background: '#f5f5f0', borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 10, alignItems: 'center', fontSize: 12, color: '#666' }}>
                 <span style={{ fontSize: 20 }}>&#x1F9FE;</span>
-                <span style={{ flex: 1 }}>{file?.name}</span>
-                <button onClick={() => { setFile(null); setPreview(''); setStep('upload') }} style={{ background: 'none', border: 'none', color: '#1D9E75', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>Change</button>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file?.name}</span>
+                <button onClick={() => { setFile(null); setPreview(''); setStep('upload') }} style={{ background: 'none', border: 'none', color: '#1D9E75', fontSize: 12, cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}>Change</button>
               </div>
-
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setStep('upload')} style={{ flex: 1, padding: '13px', background: '#fff', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer', color: '#666' }}>
                   &#x2190; Back
