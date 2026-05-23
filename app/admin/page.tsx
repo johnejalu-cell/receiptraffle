@@ -34,7 +34,6 @@ export default function AdminPage() {
   const [entryFilter, setEntryFilter] = useState('all')
   const [promoFilter, setPromoFilter] = useState('all')
   const [search, setSearch] = useState('')
-  const [printPromo, setPrintPromo] = useState<number | null>(null)
 
   function checkPin() {
     if (pin === '1234') { setAuthed(true) }
@@ -52,6 +51,7 @@ export default function AdminPage() {
 
   function exportCSV(promoId: number | 'all') {
     const entries = promoId === 'all' ? ALL_ENTRIES : ALL_ENTRIES.filter(e => e.promoId === promoId)
+    const promoName = promoId === 'all' ? 'all' : PROMOTIONS.find(p => p.id === promoId)?.name.replace(/\s+/g, '-') || 'promo'
     const header = 'Ticket,Name,Phone,Email,Promotion,Amount (UGX),Retailer,Date,Status,AI Confidence'
     const rows = entries.map(e => `${e.ticket},"${e.name}",${e.phone},${e.email || '-'},"${e.promo}",${e.amount},"${e.retailer}",${e.date},${e.status},${e.aiConfidence}%`)
     const csv = [header, ...rows].join('\n')
@@ -59,7 +59,7 @@ export default function AdminPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `receiptraffle-entries-${promoId === 'all' ? 'all' : PROMOTIONS.find(p=>p.id===promoId)?.name.replace(/\s+/g,'-')}.csv`
+    a.download = `receiptraffle-entries-${promoName}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -67,10 +67,8 @@ export default function AdminPage() {
   function printEntries(promoId: number) {
     const promo = PROMOTIONS.find(p => p.id === promoId)!
     const entries = ALL_ENTRIES.filter(e => e.promoId === promoId)
-    const win = document.open('', '_blank')
-    if (!win) return
-    win.document.write(`
-      <html><head><title>${promo.name} — Entries</title>
+    const printContent = `
+      <html><head><title>${promo.name} - Entries</title>
       <style>
         body { font-family: Arial, sans-serif; padding: 20px; font-size: 13px; }
         h1 { font-size: 18px; margin-bottom: 4px; }
@@ -82,31 +80,32 @@ export default function AdminPage() {
         .approved { color: #085041; font-weight: bold; }
         .pending { color: #633806; }
         .rejected { color: #791F1F; }
-        @media print { button { display: none; } }
+        @media print { .no-print { display: none; } }
       </style></head><body>
-      <h1>&#x1F9FE; ReceiptRaffle — ${promo.name}</h1>
-      <div class="meta">${promo.company} &nbsp;|&nbsp; Draw date: ${promo.drawDate} &nbsp;|&nbsp; Printed: ${new Date().toLocaleString('en-GB')} &nbsp;|&nbsp; Total entries: ${entries.length}</div>
-      <button onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;background:#1D9E75;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">&#x1F5A8; Print this list</button>
+      <h1>ReceiptRaffle - ${promo.name}</h1>
+      <div class="meta">${promo.company} | Draw: ${promo.drawDate} | Printed: ${new Date().toLocaleString('en-GB')} | Total: ${entries.length} entries</div>
+      <button class="no-print" onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;background:#1D9E75;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px">Print this list</button>
       <table>
-        <tr><th>#</th><th>Ticket</th><th>Name</th><th>Phone</th><th>Email</th><th>Amount</th><th>Retailer</th><th>Date</th><th>Status</th><th>AI %</th></tr>
+        <tr><th>#</th><th>Ticket</th><th>Name</th><th>Phone</th><th>Email</th><th>Amount</th><th>Retailer</th><th>Date</th><th>Status</th><th>AI%</th></tr>
         ${entries.map((e, i) => `
           <tr>
-            <td>${i+1}</td>
-            <td>${e.ticket}</td>
-            <td><strong>${e.name}</strong></td>
-            <td>${e.phone}</td>
-            <td>${e.email || '-'}</td>
-            <td>UGX ${e.amount.toLocaleString()}</td>
-            <td>${e.retailer}</td>
-            <td>${e.date}</td>
-            <td class="${e.status}">${e.status}</td>
-            <td>${e.aiConfidence}%</td>
-          </tr>
-        `).join('')}
-      </table>
-      </body></html>
-    `)
-    win.document.close()
+            <td>${i+1}</td><td>${e.ticket}</td><td><strong>${e.name}</strong></td>
+            <td>${e.phone}</td><td>${e.email || '-'}</td>
+            <td>UGX ${e.amount.toLocaleString()}</td><td>${e.retailer}</td>
+            <td>${e.date}</td><td class="${e.status}">${e.status}</td><td>${e.aiConfidence}%</td>
+          </tr>`).join('')}
+      </table></body></html>`
+
+    const iframe = document.createElement('iframe')
+    iframe.style.display = 'none'
+    document.body.appendChild(iframe)
+    iframe.contentWindow!.document.open()
+    iframe.contentWindow!.document.write(printContent)
+    iframe.contentWindow!.document.close()
+    setTimeout(() => {
+      iframe.contentWindow!.print()
+      document.body.removeChild(iframe)
+    }, 500)
   }
 
   const filteredEntries = ALL_ENTRIES.filter(e => {
@@ -179,7 +178,7 @@ export default function AdminPage() {
               ))}
             </div>
             <div style={{ background: '#FFF8E6', border: '1px solid #FAC775', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#633806', marginBottom: 10 }}>
-              &#x26A0;&#xFE0F; <strong>23 entries</strong> pending manual review.
+              &#x26A0; <strong>23 entries</strong> pending manual review.
               <button onClick={() => setTab('review')} style={{ background: 'none', border: 'none', color: '#854F0B', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, marginLeft: 4 }}>Review now</button>
             </div>
             <div style={{ background: '#E6F1FB', border: '1px solid #93C5FD', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#0C447C' }}>
@@ -194,7 +193,7 @@ export default function AdminPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>All promotions</p>
               <button onClick={() => exportCSV('all')} style={{ padding: '6px 14px', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                &#x1F4E5; Export all entries
+                Export all CSV
               </button>
             </div>
             {PROMOTIONS.map(p => (
@@ -204,7 +203,7 @@ export default function AdminPage() {
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{p.name}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{p.company} · Draw: {p.drawDate}</div>
                   </div>
-                  <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#E1F5EE', color: '#085041', fontWeight: 600, height: 'fit-content' }}>Active</span>
+                  <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#E1F5EE', color: '#085041', fontWeight: 600 }}>Active</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 12 }}>
                   <div style={{ background: '#f5f5f0', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
@@ -222,13 +221,13 @@ export default function AdminPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => exportCSV(p.id)} style={{ flex: 1, padding: '8px', background: '#EEEDFE', color: '#3C3489', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                    &#x1F4E5; CSV
+                    CSV
                   </button>
                   <button onClick={() => printEntries(p.id)} style={{ flex: 1, padding: '8px', background: '#E6F1FB', color: '#0C447C', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                    &#x1F5A8; Print
+                    Print
                   </button>
                   <button onClick={() => { setPromoFilter(String(p.id)); setTab('entries') }} style={{ flex: 1, padding: '8px', background: '#f5f5f0', color: '#1a1a18', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                    &#x1F441; View
+                    View entries
                   </button>
                 </div>
               </div>
@@ -239,14 +238,14 @@ export default function AdminPage() {
         {tab === 'entries' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Entries</p>
+              <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Entries ({filteredEntries.length})</p>
               <button onClick={() => exportCSV(promoFilter === 'all' ? 'all' : parseInt(promoFilter))} style={{ padding: '6px 14px', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                &#x1F4E5; Export CSV
+                Export CSV
               </button>
             </div>
             <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, phone or ticket..."
               style={{ width: '100%', padding: '10px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, marginBottom: 10, background: '#fff' }} />
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
               <select value={promoFilter} onChange={e => setPromoFilter(e.target.value)}
                 style={{ padding: '6px 10px', border: '1px solid #d0d0c8', borderRadius: 8, fontSize: 12, background: '#fff' }}>
                 <option value="all">All promotions</option>
@@ -259,20 +258,15 @@ export default function AdminPage() {
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: 12, color: '#999', marginBottom: 10 }}>{filteredEntries.length} entries shown</div>
             {filteredEntries.map(e => (
               <div key={e.id} style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 12, padding: '1rem', marginBottom: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{e.name}</div>
-                    <div style={{ fontSize: 12, color: '#888' }}>{e.phone} {e.email ? `· ${e.email}` : ''}</div>
+                    <div style={{ fontSize: 12, color: '#888' }}>{e.phone}{e.email ? ` · ${e.email}` : ''}</div>
                     <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>{e.promo}</div>
-                    <div style={{ fontSize: 12, color: '#666' }}>
-                      UGX {e.amount.toLocaleString()} · {e.retailer} · {e.date}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
-                      Ticket: {e.ticket} · AI: {e.aiConfidence}%
-                    </div>
+                    <div style={{ fontSize: 12, color: '#666' }}>UGX {e.amount.toLocaleString()} · {e.retailer} · {e.date}</div>
+                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Ticket: {e.ticket} · AI: {e.aiConfidence}%</div>
                   </div>
                   <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600, marginLeft: 8, flexShrink: 0,
                     background: e.status === 'approved' ? '#E1F5EE' : e.status === 'pending' ? '#FFF8E6' : '#FCEBEB',
@@ -301,8 +295,8 @@ export default function AdminPage() {
                   {e.promo} · UGX {e.amount.toLocaleString()} · {e.retailer} · {e.ticket}
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button style={{ flex: 1, padding: '8px', background: '#E1F5EE', color: '#085041', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>&#x2713; Approve</button>
-                  <button style={{ flex: 1, padding: '8px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>&#x2717; Reject</button>
+                  <button style={{ flex: 1, padding: '8px', background: '#E1F5EE', color: '#085041', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Approve</button>
+                  <button style={{ flex: 1, padding: '8px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Reject</button>
                 </div>
               </div>
             ))}
@@ -318,13 +312,13 @@ export default function AdminPage() {
                 <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>{p.verified.toLocaleString()} eligible entries · Draw: {p.drawDate}</div>
                 {(winners[p.id] || []).map((w, i) => (
                   <div key={i} style={{ background: '#E1F5EE', borderRadius: 10, padding: '10px 14px', marginBottom: 8 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#085041' }}>&#x1F3C6; {w.name} — Draw #{i+1}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#085041' }}>Winner #{i+1}: {w.name}</div>
                     <div style={{ fontSize: 11, color: '#0F6E56' }}>{w.time}</div>
                   </div>
                 ))}
                 <button onClick={() => runDraw(p.id)} disabled={drawingId === p.id}
-                  style={{ width: '100%', padding: '10px', background: drawingId === p.id ? '#9BA4B5' : '#534AB7', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-                  {drawingId === p.id ? 'Drawing...' : '&#x1F3B2; Run draw'}
+                  style={{ width: '100%', padding: '10px', background: drawingId === p.id ? '#9BA4B5' : '#534AB7', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: drawingId === p.id ? 'not-allowed' : 'pointer' }}>
+                  {drawingId === p.id ? 'Drawing...' : 'Run draw'}
                 </button>
               </div>
             ))}
@@ -348,15 +342,14 @@ export default function AdminPage() {
                   <div>Phone: <strong>{s.phone}</strong></div>
                   <div>Email: <strong>{s.email}</strong></div>
                   <div>Min spend: <strong>UGX {s.minSpend.toLocaleString()}</strong></div>
-                  <div>Draw date: <strong>{s.drawDate}</strong></div>
+                  <div style={{ gridColumn: '1/-1' }}>Draw: <strong>{s.drawDate}</strong> · Prizes: {s.prizes.join(' · ')}</div>
                 </div>
-                <div style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>Prizes: {s.prizes.join(' · ')}</div>
                 <div style={{ background: '#FFF8E6', border: '1px solid #FAC775', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#633806', marginBottom: 10 }}>
-                  &#x1F4B3; Collect UGX 250,000 fee before activating
+                  Collect UGX 250,000 fee before activating
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button style={{ flex: 1, padding: '10px', background: '#E1F5EE', color: '#085041', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>&#x2713; Activate</button>
-                  <button style={{ flex: 1, padding: '10px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>&#x2717; Decline</button>
+                  <button style={{ flex: 1, padding: '10px', background: '#E1F5EE', color: '#085041', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Activate</button>
+                  <button style={{ flex: 1, padding: '10px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Decline</button>
                 </div>
               </div>
             ))}
