@@ -1,12 +1,29 @@
+'use client'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
-const PROMOTIONS = [
-  { id: 1, title: "Summer Braai Bonanza", brand: "FreshMart Supermarkets", prize: "UGX 5,000,000 cash", minSpend: "UGX 300,000", draws: "30 Jun 2025", entries: "1,842", color: "#1D9E75", icon: "🛒" },
-  { id: 2, title: "Back-to-School Win Big", brand: "EduMart Uganda", prize: "Laptop x 2", minSpend: "UGX 150,000", draws: "15 Jun 2025", entries: "3,204", color: "#534AB7", icon: "🎒" },
-  { id: 3, title: "Family Pack Jackpot", brand: "CityLodge Hotels", prize: "Weekend stay for 4", minSpend: "UGX 500,000", draws: "31 Jul 2025", entries: "411", color: "#854F0B", icon: "🏨" },
+const FALLBACK_PROMOTIONS = [
+  { id: '1', promo_name: "Summer Braai Bonanza", company_name: "FreshMart Supermarkets", prizes: ["UGX 5,000,000 cash"], min_spend: 300000, currency: "UGX", draw_date: "30 Jun 2025", entries_count: 1842, emoji: "🛒", color: "#1D9E75" },
+  { id: '2', promo_name: "Back-to-School Win Big", company_name: "EduMart Uganda", prizes: ["Laptop x 2"], min_spend: 150000, currency: "UGX", draw_date: "15 Jun 2025", entries_count: 3204, emoji: "🎒", color: "#534AB7" },
+  { id: '3', promo_name: "Family Pack Jackpot", company_name: "CityLodge Hotels", prizes: ["Weekend stay for 4"], min_spend: 500000, currency: "UGX", draw_date: "31 Jul 2025", entries_count: 411, emoji: "🏨", color: "#854F0B" },
 ]
 
 export default function Home() {
+  const [promotions, setPromotions] = useState(FALLBACK_PROMOTIONS)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/promotions')
+      .then(r => r.json())
+      .then(data => {
+        if (data.promotions && data.promotions.length > 0) {
+          setPromotions(data.promotions)
+        }
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
   return (
     <main style={{ minHeight: '100vh', background: '#fafaf9' }}>
       {/* Header */}
@@ -20,8 +37,12 @@ export default function Home() {
 
       {/* Hero */}
       <div style={{ textAlign: 'center', padding: '2rem 1.5rem 1.5rem' }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, letterSpacing: -0.5 }}>Upload your receipt.<br /><span style={{ color: '#1D9E75' }}>Enter to win big.</span></h1>
-        <p style={{ fontSize: 14, color: '#666', maxWidth: 320, margin: '0 auto 1.5rem' }}>Pick a promotion below, upload your receipt and you could win amazing prizes!</p>
+        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, letterSpacing: -0.5 }}>
+          Upload your receipt.<br /><span style={{ color: '#1D9E75' }}>Enter to win big.</span>
+        </h1>
+        <p style={{ fontSize: 14, color: '#666', maxWidth: 320, margin: '0 auto 1.5rem' }}>
+          Pick a promotion below, upload your receipt and you could win amazing prizes!
+        </p>
 
         {/* How it works */}
         <div style={{ display: 'flex', justifyContent: 'center', maxWidth: 360, margin: '0 auto 1.5rem' }}>
@@ -53,24 +74,39 @@ export default function Home() {
 
       {/* Promotions */}
       <div style={{ padding: '0 1rem 2rem', maxWidth: 500, margin: '0 auto' }}>
-        <p style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>Active promotions</p>
-        {PROMOTIONS.map(p => (
+        <p style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
+          Active promotions {!loading && `(${promotions.length})`}
+        </p>
+
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#999', fontSize: 14 }}>
+            Loading promotions...
+          </div>
+        )}
+
+        {promotions.map((p: any) => (
           <Link key={p.id} href={`/enter/${p.id}`} style={{ textDecoration: 'none' }}>
             <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 12, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-              <div style={{ width: 50, height: 50, background: p.color + '18', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>{p.icon}</div>
+              <div style={{ width: 50, height: 50, background: (p.color || '#1D9E75') + '18', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>
+                {p.emoji || '&#x1F381;'}
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2, color: '#1a1a18' }}>{p.title}</div>
-                <div style={{ fontSize: 13, color: '#888', marginBottom: 8 }}>{p.brand}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2, color: '#1a1a18' }}>{p.promo_name}</div>
+                <div style={{ fontSize: 13, color: '#888', marginBottom: 8 }}>{p.company_name}</div>
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 6 }}>
-                  <div style={{ fontSize: 12, color: '#666' }}>&#x1F3C6; <strong style={{ color: '#1a1a18' }}>{p.prize}</strong></div>
-                  <div style={{ fontSize: 12, color: '#666' }}>Min: <strong style={{ color: '#1a1a18' }}>{p.minSpend}</strong></div>
+                  <div style={{ fontSize: 12, color: '#666' }}>
+                    &#x1F3C6; <strong style={{ color: '#1a1a18' }}>{Array.isArray(p.prizes) ? p.prizes[0] : p.prizes}</strong>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#666' }}>
+                    Min: <strong style={{ color: '#1a1a18' }}>{p.currency} {parseInt(p.min_spend).toLocaleString()}</strong>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <div style={{ fontSize: 11, color: '#aaa' }}>Draw: {p.draws}</div>
-                  <div style={{ fontSize: 11, color: '#aaa' }}>{p.entries} entries</div>
+                  <div style={{ fontSize: 11, color: '#aaa' }}>Draw: {p.draw_date}</div>
+                  <div style={{ fontSize: 11, color: '#aaa' }}>{(p.entries_count || 0).toLocaleString()} entries</div>
                 </div>
               </div>
-              <div style={{ color: p.color, fontSize: 22, flexShrink: 0, marginTop: 4 }}>&rsaquo;</div>
+              <div style={{ color: p.color || '#1D9E75', fontSize: 22, flexShrink: 0, marginTop: 4 }}>&rsaquo;</div>
             </div>
           </Link>
         ))}
