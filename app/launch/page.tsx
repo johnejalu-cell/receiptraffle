@@ -7,6 +7,7 @@ export default function LaunchPage() {
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
   const [ref, setRef] = useState('')
+  const [error, setError] = useState('')
 
   const [form, setForm] = useState({
     companyName: '',
@@ -14,15 +15,13 @@ export default function LaunchPage() {
     email: '',
     phone: '',
     promoName: '',
-    brand: '',
+    description: '',
     minSpend: '',
-    currency: 'UGX',
     maxEntries: '3',
     startDate: '',
     endDate: '',
     drawDate: '',
     prizes: [''],
-    description: '',
   })
 
   function set(field: string, value: string) {
@@ -47,19 +46,48 @@ export default function LaunchPage() {
 
   async function handleSubmit() {
     setSubmitting(true)
-    await new Promise(r => setTimeout(r, 1500))
-    const refNum = 'RRP-' + Math.random().toString(36).substring(2, 8).toUpperCase()
-    setRef(refNum)
-    setDone(true)
+    setError('')
+    try {
+      const res = await fetch('/api/promotions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyName: form.companyName,
+          contactName: form.contactName,
+          email: form.email,
+          phone: form.phone,
+          promoName: form.promoName,
+          description: form.description,
+          minSpend: form.minSpend,
+          maxEntries: form.maxEntries,
+          startDate: form.startDate,
+          endDate: form.endDate,
+          drawDate: form.drawDate,
+          prizes: form.prizes.filter(Boolean),
+        })
+      })
+      const data = await res.json()
+      if (data.error) {
+        setError(data.error)
+        setSubmitting(false)
+        return
+      }
+      setRef(data.submission.ref)
+      setDone(true)
+    } catch (e) {
+      setError('Something went wrong. Please try again.')
+    }
     setSubmitting(false)
   }
 
   if (done) return (
     <main style={{ minHeight: '100vh', background: '#fafaf9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
       <div style={{ maxWidth: 440, width: '100%', textAlign: 'center' }}>
-        <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+        <div style={{ fontSize: 56, marginBottom: 16 }}>&#x1F389;</div>
         <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Promotion submitted!</h2>
-        <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>Our team will review and activate your promotion within 24 hours. You'll receive confirmation at <strong>{form.email}</strong>.</p>
+        <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>
+          Our team will review and activate your promotion within 24 hours. You will receive confirmation at <strong>{form.email}</strong>.
+        </p>
         <div style={{ background: '#fff', border: '2px solid #1D9E75', borderRadius: 14, padding: '1.25rem', marginBottom: 20 }}>
           <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Your reference number</div>
           <div style={{ fontSize: 24, fontWeight: 700, color: '#1D9E75', letterSpacing: 1 }}>{ref}</div>
@@ -67,32 +95,35 @@ export default function LaunchPage() {
           <div style={{ fontSize: 13, color: '#666' }}>{form.companyName}</div>
         </div>
         <div style={{ background: '#FFF8E6', border: '1px solid #FAC775', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#633806', marginBottom: 20 }}>
-          <strong>Payment:</strong> Our team will contact you at {form.phone} to process the UGX 250,000 promotion fee before activation.
+          Our team will contact you at <strong>{form.phone}</strong> to process the UGX 250,000 promotion fee before activation.
         </div>
-        <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>← Back to home</Link>
+        <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>&#x2190; Back to home</Link>
       </div>
     </main>
   )
 
   return (
     <main style={{ minHeight: '100vh', background: '#fafaf9' }}>
-      {/* Header */}
       <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Link href="/" style={{ color: '#666', textDecoration: 'none', fontSize: 20 }}>←</Link>
+        <Link href="/" style={{ color: '#666', textDecoration: 'none', fontSize: 20 }}>&#x2190;</Link>
         <div>
           <div style={{ fontSize: 16, fontWeight: 700 }}>Launch a promotion</div>
           <div style={{ fontSize: 12, color: '#999' }}>Step {step} of 3</div>
         </div>
       </div>
 
-      {/* Progress bar */}
       <div style={{ height: 3, background: '#e5e5e0' }}>
         <div style={{ height: '100%', background: '#1D9E75', width: `${(step / 3) * 100}%`, transition: 'width 0.3s' }} />
       </div>
 
       <div style={{ padding: '1.5rem 1rem', maxWidth: 500, margin: '0 auto' }}>
 
-        {/* STEP 1 — Business details */}
+        {error && (
+          <div style={{ background: '#FCEBEB', color: '#791F1F', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
+
         {step === 1 && (
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Your business details</h2>
@@ -125,27 +156,26 @@ export default function LaunchPage() {
                 }
                 setStep(2)
               }} style={{ width: '100%', padding: '13px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer', marginTop: 4 }}>
-                Next: Promotion details →
+                Next: Promotion details &#x2192;
               </button>
             </div>
           </div>
         )}
 
-        {/* STEP 2 — Promotion details */}
         {step === 2 && (
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Promotion details</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Set up the rules and dates for your promotion.</p>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Set the rules and dates for your promotion.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Promotion name *</label>
-                <input type="text" value={form.promoName} onChange={e => set('promoName', e.target.value)} placeholder="e.g. Summer Braai Bonanza"
+                <input type="text" value={form.promoName} onChange={e => set('promoName', e.target.value)} placeholder="e.g. Summer Win Big"
                   style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
               </div>
               <div>
                 <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Description (optional)</label>
-                <textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Brief description of the promotion..."
-                  style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff', resize: 'vertical', minHeight: 80 }} />
+                <textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Brief description..."
+                  style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff', resize: 'vertical', minHeight: 72 }} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
@@ -180,7 +210,7 @@ export default function LaunchPage() {
               </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                 <button onClick={() => setStep(1)} style={{ flex: 1, padding: '13px', background: '#fff', color: '#1a1a18', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
-                  ← Back
+                  &#x2190; Back
                 </button>
                 <button onClick={() => {
                   if (!form.promoName || !form.minSpend || !form.startDate || !form.endDate || !form.drawDate) {
@@ -189,28 +219,27 @@ export default function LaunchPage() {
                   }
                   setStep(3)
                 }} style={{ flex: 2, padding: '13px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-                  Next: Prizes →
+                  Next: Prizes &#x2192;
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* STEP 3 — Prizes */}
         {step === 3 && (
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Prizes</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>List the prizes for your draw. One prize per line.</p>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>List the prizes for your draw.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
               {form.prizes.map((prize, i) => (
                 <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <div style={{ width: 28, height: 28, background: '#E8F8F2', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#085041', flexShrink: 0 }}>
                     {i + 1}
                   </div>
-                  <input type="text" value={prize} onChange={e => setPrize(i, e.target.value)} placeholder={`Prize ${i + 1} — e.g. UGX 1,000,000 cash`}
+                  <input type="text" value={prize} onChange={e => setPrize(i, e.target.value)} placeholder={`Prize ${i + 1}`}
                     style={{ flex: 1, padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff' }} />
                   {form.prizes.length > 1 && (
-                    <button onClick={() => removePrize(i)} style={{ width: 32, height: 32, background: '#FCEBEB', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 16, color: '#A32D2D', flexShrink: 0 }}>×</button>
+                    <button onClick={() => removePrize(i)} style={{ width: 32, height: 32, background: '#FCEBEB', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 16, color: '#A32D2D', flexShrink: 0 }}>&#x00D7;</button>
                   )}
                 </div>
               ))}
@@ -221,27 +250,22 @@ export default function LaunchPage() {
 
             {/* Summary */}
             <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }}>Summary</div>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }}>Summary</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                  <span style={{ color: '#666' }}>Company</span>
-                  <span style={{ fontWeight: 600 }}>{form.companyName}</span>
+                  <span style={{ color: '#666' }}>Company</span><span style={{ fontWeight: 600 }}>{form.companyName}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                  <span style={{ color: '#666' }}>Promotion</span>
-                  <span style={{ fontWeight: 600 }}>{form.promoName}</span>
+                  <span style={{ color: '#666' }}>Promotion</span><span style={{ fontWeight: 600 }}>{form.promoName}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                  <span style={{ color: '#666' }}>Min spend</span>
-                  <span style={{ fontWeight: 600 }}>UGX {parseInt(form.minSpend || '0').toLocaleString()}</span>
+                  <span style={{ color: '#666' }}>Min spend</span><span style={{ fontWeight: 600 }}>UGX {parseInt(form.minSpend || '0').toLocaleString()}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                  <span style={{ color: '#666' }}>Draw date</span>
-                  <span style={{ fontWeight: 600 }}>{form.drawDate}</span>
+                  <span style={{ color: '#666' }}>Draw date</span><span style={{ fontWeight: 600 }}>{form.drawDate}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                  <span style={{ color: '#666' }}>Prizes</span>
-                  <span style={{ fontWeight: 600 }}>{form.prizes.filter(Boolean).length} prize(s)</span>
+                  <span style={{ color: '#666' }}>Prizes</span><span style={{ fontWeight: 600 }}>{form.prizes.filter(Boolean).length} prize(s)</span>
                 </div>
                 <div style={{ borderTop: '1px solid #e5e5e0', paddingTop: 8, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
                   <span style={{ fontWeight: 700 }}>Promotion fee</span>
@@ -251,16 +275,16 @@ export default function LaunchPage() {
             </div>
 
             <div style={{ background: '#FFF8E6', border: '1px solid #FAC775', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#633806', marginBottom: 16 }}>
-              💳 Payment of UGX 250,000 will be collected by our team before your promotion goes live.
+              Payment of UGX 250,000 will be collected by our team before your promotion goes live.
             </div>
 
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setStep(2)} style={{ flex: 1, padding: '13px', background: '#fff', color: '#1a1a18', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
-                ← Back
+                &#x2190; Back
               </button>
               <button onClick={handleSubmit} disabled={submitting || form.prizes.filter(Boolean).length === 0}
-                style={{ flex: 2, padding: '13px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer', opacity: submitting ? 0.7 : 1 }}>
-                {submitting ? 'Submitting...' : 'Submit promotion 🚀'}
+                style={{ flex: 2, padding: '13px', background: submitting ? '#9BA4B5' : '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer' }}>
+                {submitting ? 'Submitting...' : 'Submit promotion &#x1F680;'}
               </button>
             </div>
           </div>
