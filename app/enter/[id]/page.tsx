@@ -2,14 +2,15 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
-const PROMOTIONS: Record<string, any> = {
+const STATIC_PROMOTIONS: Record<string, any> = {
   '1': { title: "Summer Braai Bonanza", brand: "FreshMart Supermarkets", prize: "UGX 5,000,000 cash", minSpend: 300000, currency: "UGX", icon: "🛒", color: "#1D9E75" },
   '2': { title: "Back-to-School Win Big", brand: "EduMart Uganda", prize: "Laptop x 2", minSpend: 150000, currency: "UGX", icon: "🎒", color: "#534AB7" },
   '3': { title: "Family Pack Jackpot", brand: "CityLodge Hotels", prize: "Weekend stay for 4", minSpend: 500000, currency: "UGX", icon: "🏨", color: "#854F0B" },
 }
 
 export default function EnterPage({ params }: { params: { id: string } }) {
-  const promo = PROMOTIONS[params.id]
+  const [promo, setPromo] = useState<any>(STATIC_PROMOTIONS[params.id] || null)
+  const [promoLoaded, setPromoLoaded] = useState(!!STATIC_PROMOTIONS[params.id])
   const [step, setStep] = useState<'upload' | 'details' | 'verifying' | 'success' | 'manual'>('upload')
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState('')
@@ -19,10 +20,41 @@ export default function EnterPage({ params }: { params: { id: string } }) {
   const [result, setResult] = useState<any>(null)
   const [ticket, setTicket] = useState('')
 
+  // Load from database if not a static promo
+  useState(() => {
+    if (!STATIC_PROMOTIONS[params.id]) {
+      fetch('/api/promotions')
+        .then(r => r.json())
+        .then(data => {
+          const found = data.promotions?.find((p: any) => p.id === params.id)
+          if (found) {
+            setPromo({
+              title: found.promo_name,
+              brand: found.company_name,
+              prize: Array.isArray(found.prizes) ? found.prizes[0] : found.prizes,
+              minSpend: found.min_spend,
+              currency: found.currency || 'UGX',
+              icon: found.emoji || '🎁',
+              color: found.color || '#1D9E75',
+              dbId: found.id,
+            })
+          }
+          setPromoLoaded(true)
+        })
+        .catch(() => setPromoLoaded(true))
+    }
+  })
+
+  if (!promoLoaded) return (
+    <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: '#666' }}>Loading promotion...</p>
+    </main>
+  )
+
   if (!promo) return (
     <main style={{ padding: '2rem', textAlign: 'center' }}>
       <p>Promotion not found.</p>
-      <Link href="/" style={{ color: '#1D9E75' }}>&#x2190; Back</Link>
+      <Link href="/" style={{ color: '#1D9E75' }}>← Back</Link>
     </main>
   )
 
@@ -46,17 +78,26 @@ export default function EnterPage({ params }: { params: { id: string } }) {
         r.readAsDataURL(f)
       })
       const base64 = await toBase64(file!)
-      const res = await fetch('/api/verify-receipt', {
+      const res = await fetch('/api/entries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, mediaType: file!.type || 'image/jpeg', minSpend: promo.minSpend, currency: promo.currency })
+        body: JSON.stringify({
+          imageBase64: base64,
+          mediaType: file!.type || 'image/jpeg',
+          minSpend: promo.minSpend,
+          currency: promo.currency,
+          promotionId: promo.dbId || null,
+          name,
+          phone,
+          email,
+        })
       })
       const data = await res.json()
-      setResult(data)
-      const t = 'RR-' + Math.random().toString(36).substring(2, 10).toUpperCase()
-      setTicket(t)
-      setStep(data.verification_status === 'approved' && data.total_amount >= promo.minSpend ? 'success' : 'manual')
-    } catch {
+      if (data.error) throw new Error(data.error)
+      setResult(data.aiResult)
+      setTicket(data.ticketNumber)
+      setStep(data.verificationStatus === 'approved' ? 'success' : 'manual')
+    } catch (err) {
       const t = 'RR-' + Math.random().toString(36).substring(2, 10).toUpperCase()
       setTicket(t)
       setStep('manual')
@@ -65,7 +106,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
 
   if (step === 'verifying') return (
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#fafaf9', textAlign: 'center' }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>&#x1F50D;</div>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
       <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Verifying your receipt...</h2>
       <p style={{ color: '#666', fontSize: 14 }}>Our AI is reading your receipt. This takes a few seconds.</p>
     </main>
@@ -73,9 +114,9 @@ export default function EnterPage({ params }: { params: { id: string } }) {
 
   if (step === 'success') return (
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#fafaf9', textAlign: 'center' }}>
-      <div style={{ fontSize: 56, marginBottom: 16 }}>&#x1F389;</div>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
       <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: '#1D9E75' }}>You're entered!</h2>
-      <p style={{ color: '#666', fontSize: 15, marginBottom: 20 }}>Your receipt was verified. Good luck!</p>
+      <p style={{ color: '#666', fontSize: 15, marginBottom: 20 }}>Your receipt was verified successfully. Good luck!</p>
       <div style={{ background: '#fff', border: '2px solid #1D9E75', borderRadius: 14, padding: '1.5rem', width: '100%', maxWidth: 340, marginBottom: 20 }}>
         <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Your ticket number</div>
         <div style={{ fontSize: 22, fontWeight: 700, color: '#1D9E75', letterSpacing: 1 }}>{ticket}</div>
@@ -86,13 +127,13 @@ export default function EnterPage({ params }: { params: { id: string } }) {
         </div>
       </div>
       <p style={{ fontSize: 13, color: '#999', marginBottom: 20 }}>You will be contacted on <strong>{phone}</strong> if you win.</p>
-      <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>&#x2190; Enter another promotion</Link>
+      <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>← Enter another promotion</Link>
     </main>
   )
 
   if (step === 'manual') return (
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#fafaf9', textAlign: 'center' }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>&#x23F3;</div>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
       <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Entry received!</h2>
       <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>Your receipt has been submitted for manual review. We will confirm within 24 hours.</p>
       <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.5rem', width: '100%', maxWidth: 340, marginBottom: 20 }}>
@@ -104,14 +145,14 @@ export default function EnterPage({ params }: { params: { id: string } }) {
         </div>
       </div>
       <p style={{ fontSize: 13, color: '#999', marginBottom: 20 }}>We will contact you on <strong>{phone}</strong> within 24 hours.</p>
-      <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>&#x2190; Back to promotions</Link>
+      <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>← Back to promotions</Link>
     </main>
   )
 
   return (
     <main style={{ minHeight: '100vh', background: '#fafaf9' }}>
       <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Link href="/" style={{ color: '#666', textDecoration: 'none', fontSize: 20 }}>&#x2190;</Link>
+        <Link href="/" style={{ color: '#666', textDecoration: 'none', fontSize: 20 }}>←</Link>
         <div>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{promo.title}</div>
           <div style={{ fontSize: 12, color: '#888' }}>{promo.brand}</div>
@@ -130,59 +171,31 @@ export default function EnterPage({ params }: { params: { id: string } }) {
       </div>
 
       <div style={{ padding: '1.5rem 1rem', maxWidth: 480, margin: '0 auto' }}>
-
         <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 12, padding: '1rem', marginBottom: 20, display: 'flex', gap: 12, alignItems: 'center' }}>
           <div style={{ fontSize: 28 }}>{promo.icon}</div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: promo.color }}>Prize: {promo.prize}</div>
-            <div style={{ fontSize: 12, color: '#888' }}>Minimum spend: {promo.currency} {promo.minSpend.toLocaleString()}</div>
+            <div style={{ fontSize: 12, color: '#888' }}>Minimum spend: {promo.currency} {parseInt(promo.minSpend).toLocaleString()}</div>
           </div>
         </div>
 
         {step === 'upload' && (
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Upload your receipt</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Take a photo of your receipt or choose an image from your phone.</p>
-
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Take a photo or choose an image from your phone.</p>
             {!preview ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-                {/* Camera button — opens camera directly */}
-                <label style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-                  padding: '18px', background: '#1D9E75', color: '#fff',
-                  borderRadius: 12, cursor: 'pointer', fontSize: 16, fontWeight: 700
-                }}>
-                  <span style={{ fontSize: 24 }}>&#x1F4F7;</span>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '18px', background: '#1D9E75', color: '#fff', borderRadius: 12, cursor: 'pointer', fontSize: 16, fontWeight: 700 }}>
+                  <span style={{ fontSize: 24 }}>📷</span>
                   Take a photo now
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
-                    style={{ display: 'none' }}
-                  />
+                  <input type="file" accept="image/*" capture="environment" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} style={{ display: 'none' }} />
                 </label>
-
-                {/* Gallery button — opens file browser */}
-                <label style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-                  padding: '18px', background: '#fff', color: '#1a1a18',
-                  border: '1.5px solid #d0d0c8', borderRadius: 12, cursor: 'pointer', fontSize: 16, fontWeight: 600
-                }}>
-                  <span style={{ fontSize: 24 }}>&#x1F5BC;</span>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '18px', background: '#fff', color: '#1a1a18', border: '1.5px solid #d0d0c8', borderRadius: 12, cursor: 'pointer', fontSize: 16, fontWeight: 600 }}>
+                  <span style={{ fontSize: 24 }}>🖼</span>
                   Choose from gallery
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
-                    style={{ display: 'none' }}
-                  />
+                  <input type="file" accept="image/*,application/pdf" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} style={{ display: 'none' }} />
                 </label>
-
-                <div style={{ textAlign: 'center', fontSize: 12, color: '#bbb' }}>
-                  JPG, PNG or PDF &mdash; max 10MB
-                </div>
+                <div style={{ textAlign: 'center', fontSize: 12, color: '#bbb' }}>JPG, PNG or PDF — max 10MB</div>
               </div>
             ) : (
               <div>
@@ -192,19 +205,19 @@ export default function EnterPage({ params }: { params: { id: string } }) {
                   </div>
                 ) : (
                   <div style={{ borderRadius: 14, border: '2px solid #1D9E75', padding: '2rem', textAlign: 'center', background: '#E8F8F2', marginBottom: 12 }}>
-                    <div style={{ fontSize: 36, marginBottom: 8 }}>&#x1F4C4;</div>
+                    <div style={{ fontSize: 36, marginBottom: 8 }}>📄</div>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{file?.name}</div>
                   </div>
                 )}
                 <div style={{ background: '#E8F8F2', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#085041', fontWeight: 600, marginBottom: 14, display: 'flex', justifyContent: 'space-between' }}>
-                  <span>&#x2713; Receipt uploaded</span>
+                  <span>✓ Receipt uploaded</span>
                   <label style={{ fontSize: 12, color: '#0F6E56', cursor: 'pointer', textDecoration: 'underline' }}>
                     Change
                     <input type="file" accept="image/*,application/pdf" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} style={{ display: 'none' }} />
                   </label>
                 </div>
                 <button onClick={() => setStep('details')} style={{ width: '100%', padding: '14px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
-                  Continue &#x2192;
+                  Continue →
                 </button>
               </div>
             )}
@@ -227,22 +240,22 @@ export default function EnterPage({ params }: { params: { id: string } }) {
                   style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
               </div>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Email address (optional)</label>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Email (optional)</label>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="For winner notification"
                   style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
               </div>
               <div style={{ background: '#f5f5f0', borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 10, alignItems: 'center', fontSize: 12, color: '#666' }}>
-                <span style={{ fontSize: 20 }}>&#x1F9FE;</span>
+                <span style={{ fontSize: 20 }}>🧾</span>
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file?.name}</span>
                 <button onClick={() => { setFile(null); setPreview(''); setStep('upload') }} style={{ background: 'none', border: 'none', color: '#1D9E75', fontSize: 12, cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}>Change</button>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setStep('upload')} style={{ flex: 1, padding: '13px', background: '#fff', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer', color: '#666' }}>
-                  &#x2190; Back
+                  ← Back
                 </button>
                 <button onClick={handleVerify} disabled={!name || !phone}
                   style={{ flex: 2, padding: '13px', background: !name || !phone ? '#ccc' : '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: !name || !phone ? 'not-allowed' : 'pointer' }}>
-                  Submit entry &#x1F39F;
+                  Submit entry 🎟
                 </button>
               </div>
             </div>
