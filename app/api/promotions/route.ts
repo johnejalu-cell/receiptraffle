@@ -5,28 +5,18 @@ const SUPABASE_URL = 'https://qnpjawyeekhkzvrorqyv.supabase.co'
 export async function GET() {
   try {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!serviceKey) {
-      return NextResponse.json({ error: 'No service key found', promotions: [] })
-    }
-
+    if (!serviceKey) return NextResponse.json({ error: 'No service key', promotions: [] })
     const { createClient } = await import('@supabase/supabase-js')
-    const supabase = createClient(SUPABASE_URL, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    })
-
+    const supabase = createClient(SUPABASE_URL, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
     const { data, error } = await supabase
       .from('promotion_submissions')
       .select('*')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
-
-    if (error) {
-      return NextResponse.json({ error: error.message, code: error.code, hint: error.hint })
-    }
-
+    if (error) return NextResponse.json({ error: error.message, promotions: [] })
     return NextResponse.json({ promotions: data || [] })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message })
+    return NextResponse.json({ error: error.message, promotions: [] })
   }
 }
 
@@ -34,22 +24,13 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!serviceKey) {
-      return NextResponse.json({ error: 'No service key configured' }, { status: 500 })
-    }
-
+    if (!serviceKey) return NextResponse.json({ error: 'No service key' }, { status: 500 })
     if (!body.companyName || !body.contactName || !body.email || !body.phone || !body.promoName) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
-
     const { createClient } = await import('@supabase/supabase-js')
-    const supabase = createClient(SUPABASE_URL, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    })
-
+    const supabase = createClient(SUPABASE_URL, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
     const ref = 'RRP-' + Math.random().toString(36).substring(2, 8).toUpperCase()
-
     const { data, error } = await supabase
       .from('promotion_submissions')
       .insert({
@@ -66,24 +47,16 @@ export async function POST(req: NextRequest) {
         end_date: body.endDate || '',
         draw_date: body.drawDate || '',
         prizes: body.prizes || [],
+        product_keywords: body.productKeywords || [],
         status: 'pending',
-        ref: ref,
+        ref,
         emoji: '🎁',
         color: '#1D9E75',
         entries_count: 0,
       })
       .select()
       .single()
-
-    if (error) {
-      return NextResponse.json({
-        error: error.message,
-        code: error.code,
-        hint: error.hint,
-        details: error.details
-      }, { status: 500 })
-    }
-
+    if (error) return NextResponse.json({ error: error.message, code: error.code }, { status: 500 })
     return NextResponse.json({ submission: data }, { status: 201 })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
