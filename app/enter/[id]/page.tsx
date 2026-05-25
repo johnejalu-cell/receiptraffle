@@ -1,11 +1,11 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 const STATIC_PROMOTIONS: Record<string, any> = {
-  '1': { title: "Summer Braai Bonanza", brand: "FreshMart Supermarkets", prize: "UGX 5,000,000 cash", minSpend: 300000, currency: "UGX", icon: "🛒", color: "#1D9E75" },
-  '2': { title: "Back-to-School Win Big", brand: "EduMart Uganda", prize: "Laptop x 2", minSpend: 150000, currency: "UGX", icon: "🎒", color: "#534AB7" },
-  '3': { title: "Family Pack Jackpot", brand: "CityLodge Hotels", prize: "Weekend stay for 4", minSpend: 500000, currency: "UGX", icon: "🏨", color: "#854F0B" },
+  '1': { title: "Summer Braai Bonanza", brand: "FreshMart Supermarkets", prize: "UGX 5,000,000 cash", minSpend: 300000, currency: "UGX", icon: "🛒", color: "#1D9E75", productKeywords: ["FreshMart"] },
+  '2': { title: "Back-to-School Win Big", brand: "EduMart Uganda", prize: "Laptop x 2", minSpend: 150000, currency: "UGX", icon: "🎒", color: "#534AB7", productKeywords: ["EduMart"] },
+  '3': { title: "Family Pack Jackpot", brand: "CityLodge Hotels", prize: "Weekend stay for 4", minSpend: 500000, currency: "UGX", icon: "🏨", color: "#854F0B", productKeywords: ["CityLodge"] },
 }
 
 export default function EnterPage({ params }: { params: { id: string } }) {
@@ -20,7 +20,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
   const [result, setResult] = useState<any>(null)
   const [ticket, setTicket] = useState('')
 
-  useState(() => {
+  useEffect(() => {
     if (!STATIC_PROMOTIONS[params.id]) {
       fetch('/api/promotions')
         .then(r => r.json())
@@ -36,13 +36,14 @@ export default function EnterPage({ params }: { params: { id: string } }) {
               icon: found.emoji || '🎁',
               color: found.color || '#1D9E75',
               dbId: found.id,
+              productKeywords: found.product_keywords || [],
             })
           }
           setPromoLoaded(true)
         })
         .catch(() => setPromoLoaded(true))
     }
-  })
+  }, [params.id])
 
   if (!promoLoaded) return (
     <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -86,6 +87,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
           minSpend: promo.minSpend,
           currency: promo.currency,
           promotionId: promo.dbId || null,
+          productKeywords: promo.productKeywords || [],
           name,
           phone,
           email,
@@ -107,7 +109,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#fafaf9', textAlign: 'center' }}>
       <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
       <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Verifying your receipt...</h2>
-      <p style={{ color: '#666', fontSize: 14 }}>Our AI is reading your receipt. This takes a few seconds.</p>
+      <p style={{ color: '#666', fontSize: 14 }}>Our AI is checking your receipt for the promoted products. This takes a few seconds.</p>
     </main>
   )
 
@@ -121,7 +123,12 @@ export default function EnterPage({ params }: { params: { id: string } }) {
         <div style={{ fontSize: 22, fontWeight: 700, color: '#1D9E75', letterSpacing: 1 }}>{ticket}</div>
         <div style={{ borderTop: '1px solid #e5e5e0', marginTop: 12, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div style={{ fontSize: 13, color: '#666' }}>{promo.title}</div>
-          <div style={{ fontSize: 13, color: '#666' }}>Amount: {promo.currency} {result?.total_amount?.toLocaleString()}</div>
+          {result?.promoted_items_found?.length > 0 && (
+            <div style={{ fontSize: 13, color: '#1D9E75' }}>✓ {result.promoted_items_found.join(', ')}</div>
+          )}
+          <div style={{ fontSize: 13, color: '#666' }}>
+            Verified spend: {promo.currency} {(result?.promoted_items_total || result?.total_amount || 0).toLocaleString()}
+          </div>
           <div style={{ fontSize: 13, color: '#666' }}>{name} · {phone}</div>
         </div>
       </div>
@@ -136,9 +143,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#fafaf9', textAlign: 'center' }}>
       <div style={{ fontSize: 56, marginBottom: 16 }}>🎟</div>
       <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: '#1D9E75' }}>You're entered!</h2>
-      <p style={{ color: '#666', fontSize: 15, marginBottom: 20 }}>
-        Your entry has been received and recorded.
-      </p>
+      <p style={{ color: '#666', fontSize: 15, marginBottom: 20 }}>Your entry has been received and recorded.</p>
       <div style={{ background: '#fff', border: '2px solid #1D9E75', borderRadius: 14, padding: '1.5rem', width: '100%', maxWidth: 340, marginBottom: 20 }}>
         <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Your ticket number</div>
         <div style={{ fontSize: 22, fontWeight: 700, color: '#1D9E75', letterSpacing: 1 }}>{ticket}</div>
@@ -179,18 +184,27 @@ export default function EnterPage({ params }: { params: { id: string } }) {
       </div>
 
       <div style={{ padding: '1.5rem 1rem', maxWidth: 480, margin: '0 auto' }}>
-        <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 12, padding: '1rem', marginBottom: 20, display: 'flex', gap: 12, alignItems: 'center' }}>
-          <div style={{ fontSize: 28 }}>{promo.icon}</div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: promo.color }}>Prize: {promo.prize}</div>
-            <div style={{ fontSize: 12, color: '#888' }}>Minimum spend: {promo.currency} {parseInt(promo.minSpend).toLocaleString()}</div>
+        <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 12, padding: '1rem', marginBottom: 20 }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: promo.productKeywords?.length > 0 ? 10 : 0 }}>
+            <div style={{ fontSize: 28 }}>{promo.icon}</div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: promo.color }}>Prize: {promo.prize}</div>
+              <div style={{ fontSize: 12, color: '#888' }}>Min spend: {promo.currency} {parseInt(promo.minSpend).toLocaleString()} on promoted products</div>
+            </div>
           </div>
+          {promo.productKeywords?.length > 0 && (
+            <div style={{ background: '#f5f5f0', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#666' }}>
+              <strong>Promoted products:</strong> {promo.productKeywords.join(', ')}
+            </div>
+          )}
         </div>
 
         {step === 'upload' && (
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Upload your receipt</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Take a photo or choose an image from your phone.</p>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
+              Take a photo or choose an image. Make sure the receipt clearly shows the promoted products and amounts.
+            </p>
             {!preview ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '18px', background: '#1D9E75', color: '#fff', borderRadius: 12, cursor: 'pointer', fontSize: 16, fontWeight: 700 }}>
