@@ -20,7 +20,6 @@ export default function EnterPage({ params }: { params: { id: string } }) {
   const [result, setResult] = useState<any>(null)
   const [ticket, setTicket] = useState('')
 
-  // Load from database if not a static promo
   useState(() => {
     if (!STATIC_PROMOTIONS[params.id]) {
       fetch('/api/promotions')
@@ -126,25 +125,34 @@ export default function EnterPage({ params }: { params: { id: string } }) {
           <div style={{ fontSize: 13, color: '#666' }}>{name} · {phone}</div>
         </div>
       </div>
-      <p style={{ fontSize: 13, color: '#999', marginBottom: 20 }}>You will be contacted on <strong>{phone}</strong> if you win.</p>
+      <p style={{ fontSize: 13, color: '#999', marginBottom: 20 }}>
+        Save your ticket number! You will be contacted on <strong>{phone}</strong> if you win.
+      </p>
       <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>← Enter another promotion</Link>
     </main>
   )
 
   if (step === 'manual') return (
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#fafaf9', textAlign: 'center' }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
-      <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Entry received!</h2>
-      <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>Your receipt has been submitted for manual review. We will confirm within 24 hours.</p>
-      <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.5rem', width: '100%', maxWidth: 340, marginBottom: 20 }}>
-        <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Reference number</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: '#534AB7', letterSpacing: 1 }}>{ticket}</div>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>🎟</div>
+      <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: '#1D9E75' }}>You're entered!</h2>
+      <p style={{ color: '#666', fontSize: 15, marginBottom: 20 }}>
+        Your entry has been received and recorded.
+      </p>
+      <div style={{ background: '#fff', border: '2px solid #1D9E75', borderRadius: 14, padding: '1.5rem', width: '100%', maxWidth: 340, marginBottom: 20 }}>
+        <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Your ticket number</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: '#1D9E75', letterSpacing: 1 }}>{ticket}</div>
         <div style={{ borderTop: '1px solid #e5e5e0', marginTop: 12, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div style={{ fontSize: 13, color: '#666' }}>{promo.title}</div>
           <div style={{ fontSize: 13, color: '#666' }}>{name} · {phone}</div>
         </div>
       </div>
-      <p style={{ fontSize: 13, color: '#999', marginBottom: 20 }}>We will contact you on <strong>{phone}</strong> within 24 hours.</p>
+      <div style={{ background: '#E8F8F2', border: '1px solid #9FE1CB', borderRadius: 12, padding: '14px 18px', maxWidth: 340, width: '100%', marginBottom: 20, textAlign: 'left' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#085041', marginBottom: 6 }}>✓ Your entry is in the draw</div>
+        <div style={{ fontSize: 13, color: '#0F6E56', lineHeight: 1.6 }}>
+          Save your ticket number. You will only be contacted on <strong>{phone}</strong> if there is a problem with your receipt. Otherwise your entry stands and you are in the draw!
+        </div>
+      </div>
       <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>← Back to promotions</Link>
     </main>
   )
