@@ -12,7 +12,9 @@ export default function LaunchPage() {
   const [form, setForm] = useState({
     companyName: '', contactName: '', email: '', phone: '',
     promoName: '', description: '', minSpend: '', maxEntries: '3',
-    startDate: '', endDate: '', drawDate: '', prizes: [''],
+    startDate: '', endDate: '', drawDate: '',
+    prizes: [''],
+    productKeywords: [''], // promoted product names/keywords
   })
 
   function set(field: string, value: string) {
@@ -24,6 +26,13 @@ export default function LaunchPage() {
   }
   function removePrize(i: number) {
     setForm(f => ({ ...f, prizes: f.prizes.filter((_, idx) => idx !== i) }))
+  }
+  function addKeyword() { setForm(f => ({ ...f, productKeywords: [...f.productKeywords, ''] })) }
+  function setKeyword(i: number, val: string) {
+    setForm(f => { const k = [...f.productKeywords]; k[i] = val; return { ...f, productKeywords: k } })
+  }
+  function removeKeyword(i: number) {
+    setForm(f => ({ ...f, productKeywords: f.productKeywords.filter((_, idx) => idx !== i) }))
   }
 
   async function handleSubmit() {
@@ -46,6 +55,7 @@ export default function LaunchPage() {
           endDate: form.endDate,
           drawDate: form.drawDate,
           prizes: form.prizes.filter(Boolean),
+          productKeywords: form.productKeywords.filter(Boolean),
         })
       })
       const data = await res.json()
@@ -106,7 +116,7 @@ export default function LaunchPage() {
             <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Tell us who you are so we can set up your promotion.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {[
-                { label: 'Company / brand name *', field: 'companyName', type: 'text', placeholder: 'e.g. FreshMart Supermarkets' },
+                { label: 'Company / brand name *', field: 'companyName', type: 'text', placeholder: 'e.g. Freshlands Foods' },
                 { label: 'Contact person name *', field: 'contactName', type: 'text', placeholder: 'Your full name' },
                 { label: 'Email address *', field: 'email', type: 'email', placeholder: 'you@company.com' },
                 { label: 'Phone number *', field: 'phone', type: 'tel', placeholder: '+256 7XX XXX XXX' },
@@ -134,18 +144,18 @@ export default function LaunchPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Promotion name *</label>
-                <input type="text" value={form.promoName} onChange={e => set('promoName', e.target.value)} placeholder="e.g. Win Big This Summer"
+                <input type="text" value={form.promoName} onChange={e => set('promoName', e.target.value)} placeholder="e.g. Win with Freshlands"
                   style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
               </div>
               <div>
                 <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Description (optional)</label>
-                <textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Brief description..."
+                <textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Brief description of your promotion..."
                   style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff', resize: 'vertical', minHeight: 72 }} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Min spend (UGX) *</label>
-                  <input type="number" value={form.minSpend} onChange={e => set('minSpend', e.target.value)} placeholder="300000"
+                  <input type="number" value={form.minSpend} onChange={e => set('minSpend', e.target.value)} placeholder="30000"
                     style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
                 </div>
                 <div>
@@ -173,10 +183,40 @@ export default function LaunchPage() {
                 <input type="date" value={form.drawDate} onChange={e => set('drawDate', e.target.value)}
                   style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff' }} />
               </div>
+
+              {/* Product keywords — the key new field */}
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                  Promoted product names *
+                </label>
+                <p style={{ fontSize: 12, color: '#666', marginBottom: 10, lineHeight: 1.5 }}>
+                  List the exact product names or keywords that appear on receipts. The AI will look for these items on each receipt and only count their spend towards the minimum.
+                </p>
+                <div style={{ background: '#E8F8F2', border: '1px solid #9FE1CB', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#085041', marginBottom: 10 }}>
+                  Example: "Freshlands Pickle", "Freshlands Hot Sauce", "Freshlands" — add each product or brand name separately.
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {form.productKeywords.map((kw, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input type="text" value={kw} onChange={e => setKeyword(i, e.target.value)}
+                        placeholder={`Product name ${i + 1} e.g. Freshlands Pickle`}
+                        style={{ flex: 1, padding: '10px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff' }} />
+                      {form.productKeywords.length > 1 && (
+                        <button onClick={() => removeKeyword(i)} style={{ width: 32, height: 32, background: '#FCEBEB', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 16, color: '#A32D2D', flexShrink: 0 }}>×</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={addKeyword} style={{ width: '100%', padding: '8px', background: '#fff', border: '1.5px dashed #d0d0c8', borderRadius: 10, fontSize: 13, color: '#666', cursor: 'pointer', marginTop: 8 }}>
+                  + Add another product
+                </button>
+              </div>
+
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setStep(1)} style={{ flex: 1, padding: '13px', background: '#fff', color: '#1a1a18', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>← Back</button>
                 <button onClick={() => {
-                  if (!form.promoName || !form.minSpend || !form.startDate || !form.endDate || !form.drawDate) { alert('Please fill in all fields'); return }
+                  if (!form.promoName || !form.minSpend || !form.startDate || !form.endDate || !form.drawDate) { alert('Please fill in all required fields'); return }
+                  if (form.productKeywords.filter(Boolean).length === 0) { alert('Please add at least one promoted product name'); return }
                   setStep(3)
                 }} style={{ flex: 2, padding: '13px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
                   Next: Prizes →
@@ -205,17 +245,21 @@ export default function LaunchPage() {
             <button onClick={addPrize} style={{ width: '100%', padding: '10px', background: '#fff', border: '1.5px dashed #d0d0c8', borderRadius: 10, fontSize: 14, color: '#666', cursor: 'pointer', marginBottom: 20 }}>
               + Add another prize
             </button>
+
+            {/* Summary */}
             <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 16 }}>
               <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }}>Summary</div>
               {[
                 ['Company', form.companyName],
                 ['Promotion', form.promoName],
-                ['Min spend', `UGX ${parseInt(form.minSpend||'0').toLocaleString()}`],
+                ['Min spend on promoted products', `UGX ${parseInt(form.minSpend||'0').toLocaleString()}`],
+                ['Promoted products', form.productKeywords.filter(Boolean).join(', ')],
                 ['Draw date', form.drawDate],
                 ['Prizes', `${form.prizes.filter(Boolean).length} prize(s)`],
               ].map(([label, value]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
-                  <span style={{ color: '#666' }}>{label}</span><span style={{ fontWeight: 600 }}>{value}</span>
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6, gap: 8 }}>
+                  <span style={{ color: '#666', flexShrink: 0 }}>{label}</span>
+                  <span style={{ fontWeight: 600, textAlign: 'right' }}>{value}</span>
                 </div>
               ))}
               <div style={{ borderTop: '1px solid #e5e5e0', paddingTop: 8, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
@@ -223,6 +267,7 @@ export default function LaunchPage() {
                 <span style={{ fontWeight: 700, color: '#1D9E75' }}>UGX 250,000</span>
               </div>
             </div>
+
             <div style={{ background: '#FFF8E6', border: '1px solid #FAC775', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#633806', marginBottom: 16 }}>
               Payment of UGX 250,000 will be collected by our team before your promotion goes live.
             </div>
