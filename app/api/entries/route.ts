@@ -14,16 +14,16 @@ export async function POST(req: NextRequest) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     const anthropicKey = process.env.ANTHROPIC_API_KEY
 
-    // Build product keywords string for AI prompt
     const keywordsList = Array.isArray(productKeywords) && productKeywords.length > 0
       ? productKeywords.join('", "')
       : null
 
     const productInstruction = keywordsList
       ? `The promotion requires purchase of these specific products: "${keywordsList}".
-You must find these products as line items on the receipt and add up ONLY their amounts.
-The total spend on these promoted products (not the full receipt total) must be >= ${minSpend || 0} ${currency || 'UGX'}.
-If you cannot find any of these products on the receipt, set status to "manual_review".`
+Find these products as line items on the receipt and add up ONLY their amounts.
+The total spend on these promoted products must be >= ${minSpend || 0} ${currency || 'UGX'}.
+If you cannot find any of these products clearly on the receipt, set status to "manual_review".
+If the products are present and the total meets the minimum, set status to "approved".`
       : `Check that the total receipt amount is >= ${minSpend || 0} ${currency || 'UGX'}.`
 
     let aiResult: any = {
@@ -52,30 +52,27 @@ If you cannot find any of these products on the receipt, set status to "manual_r
               },
               {
                 type: 'text',
-                text: `You are a strict receipt verification system for a prize promotion.
-
-Analyse this receipt image carefully.
+                text: `You are a receipt verification system for a prize promotion. Analyse this receipt image.
 
 ${productInstruction}
 
-Rules:
-- The image must clearly show a receipt or invoice
-- The date must be visible and recent (within 90 days)
-- The retailer/store name must be identifiable
-- Only set status to "approved" if you are highly confident ALL criteria are met
-- If the image is blurry, unclear, or not a receipt, set status to "manual_review"
-- Set confidence 0-100 reflecting how clearly the receipt is readable
+Guidelines:
+- If the receipt is clearly readable and meets the criteria, approve it
+- Only send to manual_review if: image is genuinely unclear/blurry, OR promoted products are genuinely absent, OR amount genuinely falls short
+- Do not be overly strict — if the products are visible on the receipt, approve
+- A PDF or digital receipt is perfectly valid
+- confidence should be 80+ for a clear digital/printed receipt
 
 Respond ONLY with valid JSON, no markdown:
 {
-  "retailer": "store name or Unknown",
-  "date": "DD/MM/YYYY or empty string",
+  "retailer": "store name",
+  "date": "DD/MM/YYYY",
   "total_amount": full receipt total as number,
-  "promoted_items_found": ["list of promoted product names found on receipt"],
-  "promoted_items_total": total spend on promoted items only as number,
+  "promoted_items_found": ["exact product names found"],
+  "promoted_items_total": total of promoted items only as number,
   "currency": "${currency || 'UGX'}",
   "verification_status": "approved" or "manual_review",
-  "verification_reason": "brief explanation",
+  "verification_reason": "brief reason",
   "confidence": number 0-100
 }`
               }
@@ -91,28 +88,28 @@ Respond ONLY with valid JSON, no markdown:
 
         const parsed = JSON.parse(raw)
 
-        // Determine the amount to check against minimum spend
         const amountToCheck = keywordsList
           ? (parsed.promoted_items_total || 0)
           : (parsed.total_amount || 0)
 
+        // Approve if: AI says approved AND amount meets minimum AND confidence >= 55
         if (
           parsed.verification_status === 'approved' &&
-          parsed.confidence >= 70 &&
+          parsed.confidence >= 55 &&
           amountToCheck >= (minSpend || 0) &&
           amountToCheck > 0
         ) {
           aiResult = parsed
         } else {
-          let reason = parsed.verification_reason
-          if (parsed.confidence < 70) {
+          let reason = parsed.verification_reason || 'Sent for manual review'
+          if (parsed.confidence < 55) {
             reason = `Low confidence (${parsed.confidence}%) — sent for manual review`
-          } else if (keywordsList && (!parsed.promoted_items_found?.length)) {
-            reason = `Promoted products not found on receipt — sent for manual review`
+          } else if (keywordsList && (!parsed.promoted_items_found?.length || parsed.promoted_items_found.length === 0)) {
+            reason = `Promoted products not clearly found on receipt`
           } else if (amountToCheck < (minSpend || 0)) {
             reason = keywordsList
-              ? `Promoted items total (${amountToCheck} ${currency}) is below minimum spend of ${minSpend} ${currency}`
-              : `Receipt total (${amountToCheck} ${currency}) is below minimum spend of ${minSpend} ${currency}`
+              ? `Promoted items total (UGX ${amountToCheck.toLocaleString()}) below minimum of UGX ${parseInt(minSpend).toLocaleString()}`
+              : `Receipt total below minimum spend`
           }
           aiResult = { ...parsed, verification_status: 'manual_review', verification_reason: reason }
         }
@@ -127,7 +124,9 @@ Respond ONLY with valid JSON, no markdown:
     // Save to Supabase
     try {
       const { createClient } = await import('@supabase/supabase-js')
-      const supabase = createClient(SUPABASE_URL, serviceKey!, { auth: { autoRefreshToken: false, persistSession: false } })
+      const supabase = createClient(SUPABASE_URL, serviceKey!, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      })
       await supabase.from('customer_entries').insert({
         promotion_id: promotionId || null,
         customer_name: name,
