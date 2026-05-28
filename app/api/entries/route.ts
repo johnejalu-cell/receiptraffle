@@ -3,6 +3,14 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const SUPABASE_URL = 'https://qnpjawyeekhkzvrorqyv.supabase.co'
 
+// Anthropic only accepts these image types
+function normaliseMediaType(raw: string): 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' {
+  if (raw === 'image/png') return 'image/png'
+  if (raw === 'image/gif') return 'image/gif'
+  if (raw === 'image/webp') return 'image/webp'
+  return 'image/jpeg' // default — covers image/jpeg, image/heic, image/heif, and anything else
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { imageBase64, mediaType, minSpend, currency, promotionId, name, phone, email, productKeywords } = await req.json()
@@ -14,6 +22,7 @@ export async function POST(req: NextRequest) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     const anthropicKey = process.env.ANTHROPIC_API_KEY
     const ticket = 'RR-' + Math.random().toString(36).substring(2, 10).toUpperCase()
+    const safeMediaType = normaliseMediaType(mediaType || '')
 
     // AI verification
     let aiResult: any = {
@@ -40,7 +49,7 @@ export async function POST(req: NextRequest) {
 
 Add up the total cost of ONLY those matching items.
 
-Reply with JSON only:
+Reply with JSON only (no markdown, no explanation):
 {
   "retailer": "store name",
   "date": "date on receipt",
@@ -50,14 +59,14 @@ Reply with JSON only:
   "currency": "${currency || 'UGX'}",
   "verification_status": "approved or manual_review",
   "verification_reason": "what you found",
-  "confidence": how clearly you can read the receipt as a number 0-100
+  "confidence": confidence as a plain number 0-100
 }
 
 Set verification_status to "approved" if you found matching items AND their total >= ${minSpend || 0}.
 Set to "manual_review" if no matching items found or total is too low or receipt is unclear.`
           : `Look at this receipt image.
 
-Reply with JSON only:
+Reply with JSON only (no markdown, no explanation):
 {
   "retailer": "store name",
   "date": "date on receipt",
@@ -67,20 +76,20 @@ Reply with JSON only:
   "currency": "${currency || 'UGX'}",
   "verification_status": "approved or manual_review",
   "verification_reason": "brief reason",
-  "confidence": how clearly you can read the receipt as a number 0-100
+  "confidence": confidence as a plain number 0-100
 }
 
 Set verification_status to "approved" if total_amount >= ${minSpend || 0} and receipt is legible.`
 
         const response = await anthropic.messages.create({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-5-20251001',
           max_tokens: 800,
           messages: [{
             role: 'user',
             content: [
               {
                 type: 'image',
-                source: { type: 'base64', media_type: mediaType as any, data: imageBase64 }
+                source: { type: 'base64', media_type: safeMediaType, data: imageBase64 }
               },
               { type: 'text', text: prompt }
             ]
@@ -121,7 +130,7 @@ Set verification_status to "approved" if total_amount >= ${minSpend || 0} and re
 
     const isApproved = aiResult.verification_status === 'approved'
 
-    // Save entry to Supabase — no image storage, just the database row
+    // Save entry to Supabase
     if (serviceKey) {
       const { createClient } = await import('@supabase/supabase-js')
       const supabase = createClient(SUPABASE_URL, serviceKey, {
