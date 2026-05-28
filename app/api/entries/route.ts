@@ -15,33 +15,7 @@ export async function POST(req: NextRequest) {
     const anthropicKey = process.env.ANTHROPIC_API_KEY
     const ticket = 'RR-' + Math.random().toString(36).substring(2, 10).toUpperCase()
 
-    // Save receipt image to Supabase Storage
-    let receiptImagePath = null
-    if (serviceKey) {
-      try {
-        const { createClient } = await import('@supabase/supabase-js')
-        const supabase = createClient(SUPABASE_URL, serviceKey, {
-          auth: { autoRefreshToken: false, persistSession: false }
-        })
-        const imageBuffer = Buffer.from(imageBase64, 'base64')
-        const fileName = `${ticket}.${mediaType.includes('pdf') ? 'pdf' : 'jpg'}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('receipts')
-          .upload(fileName, imageBuffer, {
-            contentType: mediaType || 'image/jpeg',
-            upsert: false
-          })
-        if (!uploadError) {
-          receiptImagePath = fileName
-        } else {
-          console.error('Upload error:', uploadError.message)
-        }
-      } catch (uploadErr) {
-        console.error('Storage error:', uploadErr)
-      }
-    }
-
-    // AI verification - simplified prompt for better results
+    // AI verification
     let aiResult: any = {
       verification_status: 'manual_review',
       total_amount: 0,
@@ -74,9 +48,9 @@ Reply with JSON only:
   "promoted_items_found": ["item names found from the list"],
   "promoted_items_total": total cost of matching items only as number,
   "currency": "${currency || 'UGX'}",
-  "verification_status": "${`promoted_items_total >= ${minSpend || 0}` ? 'use approved if items found and total meets minimum, else manual_review' : 'approved or manual_review'}",
+  "verification_status": "approved or manual_review",
   "verification_reason": "what you found",
-  "confidence": how clearly you can read the receipt 0-100
+  "confidence": how clearly you can read the receipt as a number 0-100
 }
 
 Set verification_status to "approved" if you found matching items AND their total >= ${minSpend || 0}.
@@ -86,14 +60,14 @@ Set to "manual_review" if no matching items found or total is too low or receipt
 Reply with JSON only:
 {
   "retailer": "store name",
-  "date": "date on receipt", 
+  "date": "date on receipt",
   "total_amount": total amount as number,
   "promoted_items_found": [],
   "promoted_items_total": 0,
   "currency": "${currency || 'UGX'}",
-  "verification_status": "approved if total >= ${minSpend || 0} and receipt is clear, else manual_review",
+  "verification_status": "approved or manual_review",
   "verification_reason": "brief reason",
-  "confidence": 0-100
+  "confidence": how clearly you can read the receipt as a number 0-100
 }
 
 Set verification_status to "approved" if total_amount >= ${minSpend || 0} and receipt is legible.`
@@ -119,7 +93,6 @@ Set verification_status to "approved" if total_amount >= ${minSpend || 0} and re
           .replace(/```json|```/g, '')
           .trim()
 
-        console.log('AI raw response:', raw)
         const parsed = JSON.parse(raw)
 
         const amountToCheck = keywords.length > 0
@@ -136,7 +109,7 @@ Set verification_status to "approved" if total_amount >= ${minSpend || 0} and re
           let reason = 'Sent for manual review'
           if (!isReadable) reason = `Receipt not clearly readable (confidence: ${parsed.confidence}%)`
           else if (!hasItems) reason = `Promoted products (${keywords.join(', ')}) not found on receipt`
-          else if (!meetsMinimum) reason = `Amount UGX ${amountToCheck.toLocaleString()} is below minimum UGX ${parseInt(minSpend||'0').toLocaleString()}`
+          else if (!meetsMinimum) reason = `Amount UGX ${amountToCheck.toLocaleString()} is below minimum UGX ${parseInt(minSpend || '0').toLocaleString()}`
           aiResult = { ...parsed, verification_status: 'manual_review', verification_reason: reason }
         }
 
@@ -148,30 +121,30 @@ Set verification_status to "approved" if total_amount >= ${minSpend || 0} and re
 
     const isApproved = aiResult.verification_status === 'approved'
 
-    // Save entry to Supabase
+    // Save entry to Supabase — no image storage, just the database row
     if (serviceKey) {
-      try {
-        const { createClient } = await import('@supabase/supabase-js')
-        const supabase = createClient(SUPABASE_URL, serviceKey, {
-          auth: { autoRefreshToken: false, persistSession: false }
-        })
-        await supabase.from('customer_entries').insert({
-          promotion_id: promotionId || null,
-          customer_name: name,
-          customer_phone: phone,
-          customer_email: email || null,
-          ticket_number: ticket,
-          amount: aiResult.promoted_items_total || aiResult.total_amount || 0,
-          retailer: aiResult.retailer || 'Unknown',
-          receipt_date: aiResult.date || null,
-          currency: currency || 'UGX',
-          verification_status: isApproved ? 'approved' : 'manual_review',
-          ai_confidence: aiResult.confidence || 0,
-          ai_result: aiResult,
-          receipt_image_path: receiptImagePath,
-        })
-      } catch (dbError: any) {
-        console.error('DB error:', dbError.message)
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabase = createClient(SUPABASE_URL, serviceKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      })
+      const { error: dbError } = await supabase.from('customer_entries').insert({
+        promotion_id: promotionId || null,
+        customer_name: name,
+        customer_phone: phone,
+        customer_email: email || null,
+        ticket_number: ticket,
+        amount: aiResult.promoted_items_total || aiResult.total_amount || 0,
+        retailer: aiResult.retailer || 'Unknown',
+        receipt_date: aiResult.date || null,
+        currency: currency || 'UGX',
+        verification_status: isApproved ? 'approved' : 'manual_review',
+        ai_confidence: aiResult.confidence || 0,
+        ai_result: aiResult,
+        receipt_image_path: null,
+      })
+      if (dbError) {
+        console.error('DB insert error:', dbError.message, dbError.details, dbError.hint)
+        return NextResponse.json({ error: 'Failed to save entry: ' + dbError.message }, { status: 500 })
       }
     }
 
