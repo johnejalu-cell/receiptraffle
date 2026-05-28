@@ -120,6 +120,10 @@ export default function AdminPage() {
     setTimeout(() => { iframe.contentWindow!.print(); document.body.removeChild(iframe) }, 500)
   }
 
+  // Build a lookup: promotion_id -> promo_name
+  const promotionMap: Record<string, string> = {}
+  promotions.forEach(p => { promotionMap[p.id] = p.promo_name })
+
   const filteredEntries = entries.filter(e => {
     const matchFilter = entryFilter === 'all' || e.verification_status === entryFilter
     const matchPromo = promoFilter === 'all' || e.promotion_id === promoFilter
@@ -326,6 +330,7 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{e.customer_name}</div>
+                    <div style={{ fontSize: 12, color: '#1D9E75', fontWeight: 600 }}>{promotionMap[e.promotion_id] || 'Unknown promotion'}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone}{e.customer_email ? ` · ${e.customer_email}` : ''}</div>
                     <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>UGX {parseInt(e.amount).toLocaleString()} · {e.retailer}</div>
                     <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Ticket: {e.ticket_number} · AI: {e.ai_confidence}% · {e.created_at?.split('T')[0]}</div>
@@ -350,6 +355,7 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{e.customer_name}</div>
+                    <div style={{ fontSize: 12, color: '#1D9E75', fontWeight: 600 }}>{promotionMap[e.promotion_id] || 'Unknown promotion'}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone} · {e.created_at?.split('T')[0]}</div>
                   </div>
                   <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#FFF8E6', color: '#633806', fontWeight: 600 }}>AI: {e.ai_confidence}%</span>
