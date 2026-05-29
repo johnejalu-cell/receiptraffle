@@ -8,13 +8,40 @@ export async function GET() {
     if (!serviceKey) return NextResponse.json({ error: 'No service key', promotions: [] })
     const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(SUPABASE_URL, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+
+    // Fetch active promotions
     const { data, error } = await supabase
       .from('promotion_submissions')
       .select('*')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
+
     if (error) return NextResponse.json({ error: error.message, promotions: [] })
-    return NextResponse.json({ promotions: data || [] })
+    if (!data || data.length === 0) return NextResponse.json({ promotions: [] })
+
+    // Count approved entries per promotion from customer_entries
+    const ids = data.map((p: any) => p.id)
+    const { data: entryCounts } = await supabase
+      .from('customer_entries')
+      .select('promotion_id')
+      .in('promotion_id', ids)
+      .eq('verification_status', 'approved')
+
+    // Build a count map
+    const countMap: Record<string, number> = {}
+    if (entryCounts) {
+      entryCounts.forEach((e: any) => {
+        countMap[e.promotion_id] = (countMap[e.promotion_id] || 0) + 1
+      })
+    }
+
+    // Attach live entry counts to each promotion
+    const promotions = data.map((p: any) => ({
+      ...p,
+      entries_count: countMap[p.id] || 0,
+    }))
+
+    return NextResponse.json({ promotions })
   } catch (error: any) {
     return NextResponse.json({ error: error.message, promotions: [] })
   }
@@ -41,7 +68,7 @@ export async function POST(req: NextRequest) {
         promo_name: body.promoName,
         description: body.description || '',
         min_spend: parseInt(body.minSpend) || 0,
-        currency: 'UGX',
+        currency: body.currency || 'USD',
         max_entries: parseInt(body.maxEntries) || 3,
         start_date: body.startDate || '',
         end_date: body.endDate || '',
