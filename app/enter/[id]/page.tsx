@@ -65,32 +65,49 @@ export default function EnterPage({ params }: { params: { id: string } }) {
     try {
       // Compress image before converting to base64 to stay under Vercel 4.5MB limit
       const compressImage = (f: File): Promise<{base64: string, type: string}> => new Promise((res, rej) => {
+        // Helper to safely extract base64 from data URL
+        const extractBase64 = (dataUrl: string): string => {
+          const parts = dataUrl.split(',')
+          return parts.length > 1 ? parts[1] : dataUrl
+        }
+
         if (f.type === 'application/pdf') {
           const r = new FileReader()
-          r.onload = () => res({ base64: (r.result as string).split(',')[1], type: f.type })
+          r.onload = () => res({ base64: extractBase64(r.result as string), type: 'application/pdf' })
           r.onerror = rej
           r.readAsDataURL(f)
           return
         }
-        const img = new Image()
-        const url = URL.createObjectURL(f)
-        img.onload = () => {
-          URL.revokeObjectURL(url)
-          const MAX = 1200
-          let w = img.width, h = img.height
-          if (w > MAX || h > MAX) {
-            if (w > h) { h = Math.round(h * MAX / w); w = MAX }
-            else { w = Math.round(w * MAX / h); h = MAX }
+
+        // For images: use FileReader first to get the data, then compress via canvas
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result as string
+          if (!dataUrl) { rej(new Error('FileReader returned empty result')); return }
+
+          const img = new Image()
+          img.onload = () => {
+            const MAX = 1200
+            let w = img.width, h = img.height
+            if (w > MAX || h > MAX) {
+              if (w > h) { h = Math.round(h * MAX / w); w = MAX }
+              else { w = Math.round(w * MAX / h); h = MAX }
+            }
+            const canvas = document.createElement('canvas')
+            canvas.width = w; canvas.height = h
+            const ctx = canvas.getContext('2d')!
+            ctx.drawImage(img, 0, 0, w, h)
+            const compressed = canvas.toDataURL('image/jpeg', 0.82)
+            res({ base64: extractBase64(compressed), type: 'image/jpeg' })
           }
-          const canvas = document.createElement('canvas')
-          canvas.width = w; canvas.height = h
-          const ctx = canvas.getContext('2d')!
-          ctx.drawImage(img, 0, 0, w, h)
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.82)
-          res({ base64: dataUrl.split(',')[1], type: 'image/jpeg' })
+          img.onerror = () => {
+            // Canvas failed — fall back to sending original base64
+            res({ base64: extractBase64(dataUrl), type: 'image/jpeg' })
+          }
+          img.src = dataUrl
         }
-        img.onerror = rej
-        img.src = url
+        reader.onerror = rej
+        reader.readAsDataURL(f)
       })
       const { base64, type: compressedType } = await compressImage(file!)
       const res = await fetch('/api/entries', {
