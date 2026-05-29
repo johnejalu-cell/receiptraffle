@@ -2,15 +2,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
-const STATIC_PROMOTIONS: Record<string, any> = {
-  '1': { title: "Summer Braai Bonanza", brand: "FreshMart Supermarkets", prize: "UGX 5,000,000 cash", minSpend: 300000, currency: "UGX", icon: "🛒", color: "#1D9E75", productKeywords: ["FreshMart"] },
-  '2': { title: "Back-to-School Win Big", brand: "EduMart Uganda", prize: "Laptop x 2", minSpend: 150000, currency: "UGX", icon: "🎒", color: "#534AB7", productKeywords: ["EduMart"] },
-  '3': { title: "Family Pack Jackpot", brand: "CityLodge Hotels", prize: "Weekend stay for 4", minSpend: 500000, currency: "UGX", icon: "🏨", color: "#854F0B", productKeywords: ["CityLodge"] },
-}
-
 export default function EnterPage({ params }: { params: { id: string } }) {
-  const [promo, setPromo] = useState<any>(STATIC_PROMOTIONS[params.id] || null)
-  const [promoLoaded, setPromoLoaded] = useState(!!STATIC_PROMOTIONS[params.id])
+  const [promo, setPromo] = useState<any>(null)
+  const [promoLoaded, setPromoLoaded] = useState(false)
   const [step, setStep] = useState<'upload' | 'details' | 'verifying' | 'success' | 'manual'>('upload')
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState('')
@@ -21,28 +15,26 @@ export default function EnterPage({ params }: { params: { id: string } }) {
   const [ticket, setTicket] = useState('')
 
   useEffect(() => {
-    if (!STATIC_PROMOTIONS[params.id]) {
-      fetch('/api/promotions')
-        .then(r => r.json())
-        .then(data => {
-          const found = data.promotions?.find((p: any) => p.id === params.id)
-          if (found) {
-            setPromo({
-              title: found.promo_name,
-              brand: found.company_name,
-              prize: Array.isArray(found.prizes) ? found.prizes[0] : found.prizes,
-              minSpend: found.min_spend,
-              currency: found.currency || 'UGX',
-              icon: found.emoji || '🎁',
-              color: found.color || '#1D9E75',
-              dbId: found.id,
-              productKeywords: found.product_keywords || [],
-            })
-          }
-          setPromoLoaded(true)
-        })
-        .catch(() => setPromoLoaded(true))
-    }
+    fetch('/api/promotions')
+      .then(r => r.json())
+      .then(data => {
+        const found = data.promotions?.find((p: any) => p.id === params.id)
+        if (found) {
+          setPromo({
+            title: found.promo_name,
+            brand: found.company_name,
+            prize: Array.isArray(found.prizes) ? found.prizes[0] : found.prizes,
+            minSpend: found.min_spend,
+            currency: found.currency || 'USD',
+            icon: found.emoji || '🎁',
+            color: found.color || '#1D9E75',
+            dbId: found.id,
+            productKeywords: found.product_keywords || [],
+          })
+        }
+        setPromoLoaded(true)
+      })
+      .catch(() => setPromoLoaded(true))
   }, [params.id])
 
   if (!promoLoaded) return (
@@ -127,7 +119,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
             <div style={{ fontSize: 13, color: '#1D9E75' }}>✓ {result.promoted_items_found.join(', ')}</div>
           )}
           <div style={{ fontSize: 13, color: '#666' }}>
-            Verified spend: {promo.currency} {(result?.promoted_items_total || result?.total_amount || 0).toLocaleString()}
+            Verified spend: {result?.currency || promo.currency} {(result?.promoted_items_total || result?.total_amount || 0).toLocaleString()}
           </div>
           <div style={{ fontSize: 13, color: '#666' }}>{name} · {phone}</div>
         </div>
@@ -135,22 +127,17 @@ export default function EnterPage({ params }: { params: { id: string } }) {
       <p style={{ fontSize: 13, color: '#999', marginBottom: 20 }}>
         Save your ticket number! You will be contacted on <strong>{phone}</strong> if you win.
       </p>
-      <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>← Enter another promotion</Link>
+      <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>← Back to promotions</Link>
     </main>
   )
 
   if (step === 'manual') return (
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#fafaf9', textAlign: 'center' }}>
-      <div style={{ fontSize: 56, marginBottom: 16 }}>🎟</div>
-      <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, color: '#1D9E75' }}>You're entered!</h2>
-      <p style={{ color: '#666', fontSize: 15, marginBottom: 20 }}>Your entry has been received and recorded.</p>
-      <div style={{ background: '#fff', border: '2px solid #1D9E75', borderRadius: 14, padding: '1.5rem', width: '100%', maxWidth: 340, marginBottom: 20 }}>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>🎟️</div>
+      <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>You're in the draw!</h2>
+      <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.5rem', width: '100%', maxWidth: 340, marginBottom: 20 }}>
         <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Your ticket number</div>
         <div style={{ fontSize: 22, fontWeight: 700, color: '#1D9E75', letterSpacing: 1 }}>{ticket}</div>
-        <div style={{ borderTop: '1px solid #e5e5e0', marginTop: 12, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ fontSize: 13, color: '#666' }}>{promo.title}</div>
-          <div style={{ fontSize: 13, color: '#666' }}>{name} · {phone}</div>
-        </div>
       </div>
       <div style={{ background: '#E8F8F2', border: '1px solid #9FE1CB', borderRadius: 12, padding: '14px 18px', maxWidth: 340, width: '100%', marginBottom: 20, textAlign: 'left' }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#085041', marginBottom: 6 }}>✓ Your entry is in the draw</div>
@@ -258,7 +245,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
               </div>
               <div>
                 <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Phone number *</label>
-                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+256 7XX XXX XXX"
+                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 555 000 0000"
                   style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
               </div>
               <div>
