@@ -2,14 +2,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
-const FALLBACK_PROMOTIONS = [
-  { id: '1', promo_name: "Summer Braai Bonanza", company_name: "FreshMart Supermarkets", prizes: ["UGX 5,000,000 cash"], min_spend: 300000, currency: "UGX", draw_date: "30 Jun 2025", entries_count: 1842, emoji: "🛒", color: "#1D9E75" },
-  { id: '2', promo_name: "Back-to-School Win Big", company_name: "EduMart Uganda", prizes: ["Laptop x 2"], min_spend: 150000, currency: "UGX", draw_date: "15 Jun 2025", entries_count: 3204, emoji: "🎒", color: "#534AB7" },
-  { id: '3', promo_name: "Family Pack Jackpot", company_name: "CityLodge Hotels", prizes: ["Weekend stay for 4"], min_spend: 500000, currency: "UGX", draw_date: "31 Jul 2025", entries_count: 411, emoji: "🏨", color: "#854F0B" },
-]
-
 export default function Home() {
-  const [promotions, setPromotions] = useState(FALLBACK_PROMOTIONS)
+  const [promotions, setPromotions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -75,16 +69,25 @@ export default function Home() {
       {/* Promotions */}
       <div style={{ padding: '0 1rem 2rem', maxWidth: 500, margin: '0 auto' }}>
         <p style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
-          Active promotions {!loading && `(${promotions.length})`}
+          Active promotions {!loading && promotions.length > 0 && `(${promotions.length})`}
         </p>
 
         {loading && (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#999', fontSize: 14 }}>
+          <div style={{ textAlign: 'center', padding: '2.5rem', color: '#999', fontSize: 14 }}>
+            <div style={{ fontSize: 32, marginBottom: 10 }}>&#x1F3AB;</div>
             Loading promotions...
           </div>
         )}
 
-        {promotions.map((p: any) => (
+        {!loading && promotions.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: '#fff', borderRadius: 14, border: '1px solid #e5e5e0', marginBottom: 16 }}>
+            <div style={{ fontSize: 36, marginBottom: 10 }}>&#x1F50D;</div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: '#1a1a18' }}>No active promotions</div>
+            <div style={{ fontSize: 13, color: '#888' }}>Check back soon — new prize draws are added regularly.</div>
+          </div>
+        )}
+
+        {!loading && promotions.map((p: any) => (
           <Link key={p.id} href={`/enter/${p.id}`} style={{ textDecoration: 'none' }}>
             <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 12, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
               <div style={{ width: 50, height: 50, background: (p.color || '#1D9E75') + '18', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>
