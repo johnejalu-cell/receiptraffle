@@ -16,6 +16,10 @@ export default function AdminPage() {
   const [drawingId, setDrawingId] = useState<string | null>(null)
   const [winners, setWinners] = useState<Record<string, {name:string,time:string}[]>>({})
   const [receiptModal, setReceiptModal] = useState<{url:string, name:string} | null>(null)
+  const [fee, setFee] = useState<{amount: number, currency: string, description: string} | null>(null)
+  const [feeForm, setFeeForm] = useState({ amount: '', currency: 'USD', description: '' })
+  const [feeSaving, setFeeSaving] = useState(false)
+  const [feeSaved, setFeeSaved] = useState(false)
 
   async function viewReceipt(entry: any) {
     const path = entry.receipt_image_path || entry.ai_result?.receipt_image_path
@@ -44,6 +48,12 @@ export default function AdminPage() {
       setPromotions(promData.promotions || [])
       setEntries(entData.entries || [])
       setSubmissions(subData.submissions || [])
+      fetch('/api/admin/fees').then(r => r.json()).then(d => {
+        if (d.fee) {
+          setFee(d.fee)
+          setFeeForm({ amount: String(d.fee.amount), currency: d.fee.currency || 'USD', description: d.fee.description || '' })
+        }
+      }).catch(() => {})
     } catch (e) {
       console.error('Load error:', e)
     }
@@ -75,6 +85,21 @@ export default function AdminPage() {
       body: JSON.stringify({ id, verification_status: status })
     })
     loadData()
+  }
+
+  async function saveFee() {
+    setFeeSaving(true)
+    setFeeSaved(false)
+    try {
+      const res = await fetch('/api/admin/fees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: parseFloat(feeForm.amount) || 0, currency: feeForm.currency, description: feeForm.description })
+      })
+      const data = await res.json()
+      if (data.success) { setFee(data.fee); setFeeSaved(true); setTimeout(() => setFeeSaved(false), 3000) }
+    } catch (e) {}
+    setFeeSaving(false)
   }
 
   async function runDraw(promoId: string, promoName: string) {
@@ -173,6 +198,7 @@ export default function AdminPage() {
           { id: 'entries', label: 'Entries' },
           { id: 'review', label: `Review${pendingEntries.length > 0 ? ` (${pendingEntries.length})` : ''}` },
           { id: 'draws', label: 'Draws' },
+          { id: 'fees', label: 'Fees' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ padding: '12px 14px', background: 'none', border: 'none', borderBottom: tab === t.id ? '2px solid #1D9E75' : '2px solid transparent', cursor: 'pointer', fontSize: 12, fontWeight: tab === t.id ? 700 : 400, color: tab === t.id ? '#1D9E75' : '#666', whiteSpace: 'nowrap' }}>
@@ -244,9 +270,7 @@ export default function AdminPage() {
                 </div>
                 {s.status === 'pending' && (
                   <>
-                    <div style={{ background: '#FFF8E6', border: '1px solid #FAC775', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#633806', marginBottom: 10 }}>
-                      Collect UGX 250,000 fee before activating
-                    </div>
+
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button onClick={() => activateSubmission(s.id)} style={{ flex: 1, padding: '10px', background: '#E1F5EE', color: '#085041', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>&#x2713; Activate</button>
                       <button onClick={() => declineSubmission(s.id)} style={{ flex: 1, padding: '10px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>&#x2717; Decline</button>
@@ -406,6 +430,54 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+      {tab === 'fees' && !loading && (
+        <div>
+          <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Promotion fee settings</p>
+          <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Set the fee promoters pay before their promotion goes live. This appears automatically on the promoter submission form.</p>
+          <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Fee amount</label>
+                <input type="number" value={feeForm.amount} onChange={e => setFeeForm(f => ({ ...f, amount: e.target.value }))} placeholder="e.g. 250"
+                  style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Currency</label>
+                <select value={feeForm.currency} onChange={e => setFeeForm(f => ({ ...f, currency: e.target.value }))}
+                  style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }}>
+                  <option value="USD">USD - US Dollar</option>
+                  <option value="GBP">GBP - British Pound</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="UGX">UGX - Ugandan Shilling</option>
+                  <option value="KES">KES - Kenyan Shilling</option>
+                  <option value="NGN">NGN - Nigerian Naira</option>
+                  <option value="ZAR">ZAR - South African Rand</option>
+                  <option value="GHS">GHS - Ghanaian Cedi</option>
+                  <option value="TZS">TZS - Tanzanian Shilling</option>
+                  <option value="AUD">AUD - Australian Dollar</option>
+                  <option value="CAD">CAD - Canadian Dollar</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Payment instructions (optional)</label>
+                <input type="text" value={feeForm.description} onChange={e => setFeeForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Pay via bank transfer or mobile money"
+                  style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
+              </div>
+              <button onClick={saveFee} disabled={feeSaving || !feeForm.amount}
+                style={{ width: '100%', padding: '12px', background: feeSaving ? '#9BA4B5' : feeSaved ? '#085041' : '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: feeSaving ? 'not-allowed' : 'pointer' }}>
+                {feeSaving ? 'Saving...' : feeSaved ? 'Saved!' : 'Save fee settings'}
+              </button>
+            </div>
+          </div>
+          {fee && (
+            <div style={{ background: '#E8F8F2', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#085041' }}>
+              Current fee: <strong>{fee.currency} {fee.amount.toLocaleString()}</strong>
+              {fee.description && <span> - {fee.description}</span>}
+            </div>
+          )}
+        </div>
+      )}
+
       {receiptModal && (
         <div onClick={() => setReceiptModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: '1.25rem', maxWidth: 480, width: '100%', maxHeight: '90vh', overflow: 'auto' }}>
