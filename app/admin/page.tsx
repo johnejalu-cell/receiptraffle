@@ -166,7 +166,7 @@ export default function AdminPage() {
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Admin access</h1>
         <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Enter your admin PIN</p>
         {pinError && <div style={{ background: '#FCEBEB', color: '#791F1F', padding: '8px 12px', borderRadius: 8, fontSize: 13, marginBottom: 14 }}>{pinError}</div>}
-        <input type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="••••" maxLength={6}
+        <input type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="" maxLength={6}
           onKeyDown={e => e.key === 'Enter' && checkPin()}
           style={{ width: '100%', padding: '12px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 22, textAlign: 'center', letterSpacing: 8, marginBottom: 12, background: '#f5f5f0' }} />
         <button onClick={checkPin} style={{ width: '100%', padding: '12px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Enter</button>
@@ -373,7 +373,7 @@ export default function AdminPage() {
         {tab === 'review' && !loading && (
           <div>
             <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Manual review queue ({pendingEntries.length})</p>
-            {pendingEntries.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#1D9E75', fontWeight: 600 }}>&#x2713; All clear — no entries need review</div>}
+            {pendingEntries.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#1D9E75', fontWeight: 600 }}>&#x2713; All clear  no entries need review</div>}
             {pendingEntries.map(e => (
               <div key={e.id} style={{ background: '#fff', border: '1px solid #FAC775', borderRadius: 14, padding: '1.25rem', marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -422,7 +422,7 @@ export default function AdminPage() {
                   ))}
                   <button onClick={() => runDraw(p.id, p.promo_name)} disabled={drawingId === p.id || eligible === 0}
                     style={{ width: '100%', padding: '10px', background: drawingId === p.id ? '#9BA4B5' : eligible === 0 ? '#ddd' : '#534AB7', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: drawingId === p.id || eligible === 0 ? 'not-allowed' : 'pointer' }}>
-                    {drawingId === p.id ? 'Drawing...' : eligible === 0 ? 'No eligible entries' : '&#x1F3B2; Run draw'}
+                    {drawingId === p.id ? 'Drawing...' : eligible === 0 ? 'No eligible entries' : '🎲 Run draw'}
                   </button>
                 </div>
               )
@@ -482,7 +482,7 @@ export default function AdminPage() {
         <div onClick={() => setReceiptModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: '1.25rem', maxWidth: 480, width: '100%', maxHeight: '90vh', overflow: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>Receipt — {receiptModal.name}</div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Receipt  {receiptModal.name}</div>
               <button onClick={() => setReceiptModal(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666' }}>&times;</button>
             </div>
             <img src={receiptModal.url} alt="Receipt" style={{ width: '100%', borderRadius: 8, border: '1px solid #e5e5e0' }}
