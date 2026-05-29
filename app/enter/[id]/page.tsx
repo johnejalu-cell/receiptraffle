@@ -63,19 +63,42 @@ export default function EnterPage({ params }: { params: { id: string } }) {
     if (!name || !phone) { alert('Please enter your name and phone number'); return }
     setStep('verifying')
     try {
-      const toBase64 = (f: File) => new Promise<string>((res, rej) => {
-        const r = new FileReader()
-        r.onload = () => res((r.result as string).split(',')[1])
-        r.onerror = rej
-        r.readAsDataURL(f)
+      // Compress image before converting to base64 to stay under Vercel 4.5MB limit
+      const compressImage = (f: File): Promise<{base64: string, type: string}> => new Promise((res, rej) => {
+        if (f.type === 'application/pdf') {
+          const r = new FileReader()
+          r.onload = () => res({ base64: (r.result as string).split(',')[1], type: f.type })
+          r.onerror = rej
+          r.readAsDataURL(f)
+          return
+        }
+        const img = new Image()
+        const url = URL.createObjectURL(f)
+        img.onload = () => {
+          URL.revokeObjectURL(url)
+          const MAX = 1200
+          let w = img.width, h = img.height
+          if (w > MAX || h > MAX) {
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX }
+            else { w = Math.round(w * MAX / h); h = MAX }
+          }
+          const canvas = document.createElement('canvas')
+          canvas.width = w; canvas.height = h
+          const ctx = canvas.getContext('2d')!
+          ctx.drawImage(img, 0, 0, w, h)
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.82)
+          res({ base64: dataUrl.split(',')[1], type: 'image/jpeg' })
+        }
+        img.onerror = rej
+        img.src = url
       })
-      const base64 = await toBase64(file!)
+      const { base64, type: compressedType } = await compressImage(file!)
       const res = await fetch('/api/entries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageBase64: base64,
-          mediaType: file!.type || 'image/jpeg',
+          mediaType: compressedType || 'image/jpeg',
           minSpend: promo.minSpend,
           currency: promo.currency,
           promotionId: promo.dbId || null,
