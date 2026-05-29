@@ -261,7 +261,7 @@ export default function AdminPage() {
                   <div>Contact: <strong>{s.contact_name}</strong></div>
                   <div>Phone: <strong>{s.phone}</strong></div>
                   <div>Email: <strong>{s.email}</strong></div>
-                  <div>Min spend: <strong>UGX {parseInt(s.min_spend).toLocaleString()}</strong></div>
+                  <div>Min spend: <strong>{s.currency || 'UGX'} {parseInt(s.min_spend).toLocaleString()}</strong></div>
                   <div>Draw: <strong>{s.draw_date}</strong></div>
                   <div>Submitted: <strong>{s.created_at?.split('T')[0]}</strong></div>
                 </div>
@@ -356,7 +356,7 @@ export default function AdminPage() {
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{e.customer_name}</div>
                     <div style={{ fontSize: 12, color: '#1D9E75', fontWeight: 600 }}>{promotionMap[e.promotion_id] || 'Unknown promotion'}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone}{e.customer_email ? ` · ${e.customer_email}` : ''}</div>
-                    <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>UGX {parseInt(e.amount).toLocaleString()} · {e.retailer}</div>
+                    <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>{e.ai_result?.currency || e.currency || 'UGX'} {parseInt(e.ai_result?.total_amount || e.amount || 0).toLocaleString()} · {e.ai_result?.retailer || e.retailer || 'Unknown'}</div>
                     <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Ticket: {e.ticket_number} · AI: {e.ai_confidence}% · {e.created_at?.split('T')[0]}</div>
                   </div>
                   <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600, marginLeft: 8, flexShrink: 0,
@@ -385,7 +385,7 @@ export default function AdminPage() {
                   <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#FFF8E6', color: '#633806', fontWeight: 600 }}>AI: {e.ai_confidence}%</span>
                 </div>
                 <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
-                  UGX {parseInt(e.amount).toLocaleString()} · {e.retailer} · Ticket: {e.ticket_number}
+                  {e.ai_result?.currency || e.currency || 'UGX'} {parseInt(e.ai_result?.total_amount || e.amount || 0).toLocaleString()} · {e.ai_result?.retailer || e.retailer || 'Unknown'} · Ticket: {e.ticket_number}
                 </div>
                 {e.ai_result?.verification_reason && (
                   <div style={{ background: '#FFF8E6', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#633806', marginBottom: 10 }}>
