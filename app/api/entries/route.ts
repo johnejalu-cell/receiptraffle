@@ -107,7 +107,7 @@ Set verification_status to "approved" if total_amount >= ${minSpend || 0} and re
 Set to "manual_review" only if receipt is genuinely unreadable or total clearly falls short.`
 
         const response = await anthropic.messages.create({
-          model: 'claude-sonnet-4-5-20251001',
+          model: 'claude-sonnet-4-6',
           max_tokens: 800,
           messages: [{
             role: 'user',
