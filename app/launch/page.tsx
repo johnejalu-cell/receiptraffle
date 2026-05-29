@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 export default function LaunchPage() {
@@ -8,32 +8,27 @@ export default function LaunchPage() {
   const [done, setDone] = useState(false)
   const [ref, setRef] = useState('')
   const [error, setError] = useState('')
+  const [fee, setFee] = useState<{ amount: number, currency: string, description: string } | null>(null)
 
   const [form, setForm] = useState({
     companyName: '', contactName: '', email: '', phone: '',
     promoName: '', description: '', minSpend: '', maxEntries: '3',
     startDate: '', endDate: '', drawDate: '',
     prizes: [''],
-    productKeywords: [''], // promoted product names/keywords
+    productKeywords: [''],
   })
 
-  function set(field: string, value: string) {
-    setForm(f => ({ ...f, [field]: value }))
-  }
+  useEffect(() => {
+    fetch('/api/admin/fees').then(r => r.json()).then(d => { if (d.fee) setFee(d.fee) }).catch(() => {})
+  }, [])
+
+  function set(field: string, value: string) { setForm(f => ({ ...f, [field]: value })) }
   function addPrize() { setForm(f => ({ ...f, prizes: [...f.prizes, ''] })) }
-  function setPrize(i: number, val: string) {
-    setForm(f => { const p = [...f.prizes]; p[i] = val; return { ...f, prizes: p } })
-  }
-  function removePrize(i: number) {
-    setForm(f => ({ ...f, prizes: f.prizes.filter((_, idx) => idx !== i) }))
-  }
+  function setPrize(i: number, val: string) { setForm(f => { const p = [...f.prizes]; p[i] = val; return { ...f, prizes: p } }) }
+  function removePrize(i: number) { setForm(f => ({ ...f, prizes: f.prizes.filter((_, idx) => idx !== i) })) }
   function addKeyword() { setForm(f => ({ ...f, productKeywords: [...f.productKeywords, ''] })) }
-  function setKeyword(i: number, val: string) {
-    setForm(f => { const k = [...f.productKeywords]; k[i] = val; return { ...f, productKeywords: k } })
-  }
-  function removeKeyword(i: number) {
-    setForm(f => ({ ...f, productKeywords: f.productKeywords.filter((_, idx) => idx !== i) }))
-  }
+  function setKeyword(i: number, val: string) { setForm(f => { const k = [...f.productKeywords]; k[i] = val; return { ...f, productKeywords: k } }) }
+  function removeKeyword(i: number) { setForm(f => ({ ...f, productKeywords: f.productKeywords.filter((_, idx) => idx !== i) })) }
 
   async function handleSubmit() {
     setSubmitting(true)
@@ -59,11 +54,7 @@ export default function LaunchPage() {
         })
       })
       const data = await res.json()
-      if (!res.ok || data.error) {
-        setError(data.error || 'Submission failed. Please try again.')
-        setSubmitting(false)
-        return
-      }
+      if (!res.ok || data.error) { setError(data.error || 'Submission failed. Please try again.'); setSubmitting(false); return }
       setRef(data.submission.ref)
       setDone(true)
     } catch (e) {
@@ -74,63 +65,50 @@ export default function LaunchPage() {
 
   if (done) return (
     <main style={{ minHeight: '100vh', background: '#fafaf9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
-      <div style={{ maxWidth: 440, width: '100%', textAlign: 'center' }}>
+      <div style={{ width: '100%', maxWidth: 480, textAlign: 'center' }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
-        <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Promotion submitted!</h2>
-        <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>
-          Our team will review and activate your promotion within 24 hours. You will receive confirmation at <strong>{form.email}</strong>.
-        </p>
-        <div style={{ background: '#fff', border: '2px solid #1D9E75', borderRadius: 14, padding: '1.25rem', marginBottom: 20 }}>
-          <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>Your reference number</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: '#1D9E75', letterSpacing: 1 }}>{ref}</div>
-          <div style={{ fontSize: 13, color: '#666', marginTop: 8 }}>{form.promoName}</div>
-          <div style={{ fontSize: 13, color: '#666' }}>{form.companyName}</div>
+        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Submission received!</h1>
+        <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>Your promotion has been submitted for review. Our team will be in touch shortly.</p>
+        <div style={{ background: '#E8F8F2', borderRadius: 12, padding: '1rem', marginBottom: 24 }}>
+          <div style={{ fontSize: 12, color: '#0F6E56', marginBottom: 4 }}>Your reference number</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: '#085041', letterSpacing: 2 }}>{ref}</div>
         </div>
-        <div style={{ background: '#FFF8E6', border: '1px solid #FAC775', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#633806', marginBottom: 20 }}>
-          Our team will contact you at <strong>{form.phone}</strong> to process the UGX 250,000 promotion fee.
-        </div>
-        <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>← Back to home</Link>
+        {fee && (
+          <div style={{ background: '#FFF8E6', border: '1px solid #FAC775', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#633806', marginBottom: 20 }}>
+            Our team will contact you to collect the promotion fee of <strong>{fee.currency} {fee.amount.toLocaleString()}</strong> before your promotion goes live.
+            {fee.description && <div style={{ marginTop: 6, fontSize: 12 }}>{fee.description}</div>}
+          </div>
+        )}
+        <Link href="/" style={{ display: 'inline-block', padding: '12px 28px', background: '#1D9E75', color: '#fff', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>Back to home</Link>
       </div>
     </main>
   )
 
-  return (
-    <main style={{ minHeight: '100vh', background: '#fafaf9' }}>
-      <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Link href="/" style={{ color: '#666', textDecoration: 'none', fontSize: 20 }}>←</Link>
-        <div>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>Launch a promotion</div>
-          <div style={{ fontSize: 12, color: '#999' }}>Step {step} of 3</div>
-        </div>
-      </div>
-      <div style={{ height: 3, background: '#e5e5e0' }}>
-        <div style={{ height: '100%', background: '#1D9E75', width: `${(step/3)*100}%`, transition: 'width 0.3s' }} />
-      </div>
+  const inputStyle = { width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }
+  const labelStyle = { fontSize: 13, fontWeight: 600 as const, display: 'block' as const, marginBottom: 6 }
 
-      <div style={{ padding: '1.5rem 1rem', maxWidth: 500, margin: '0 auto' }}>
-        {error && <div style={{ background: '#FCEBEB', color: '#791F1F', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{error}</div>}
+  return (
+    <main style={{ minHeight: '100vh', background: '#fafaf9', padding: '1.5rem 1rem' }}>
+      <div style={{ maxWidth: 520, margin: '0 auto' }}>
+        <Link href="/" style={{ fontSize: 13, color: '#1D9E75', textDecoration: 'none', display: 'inline-block', marginBottom: 20 }}>← Back</Link>
+        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Launch a promotion</h1>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
+          {[1, 2, 3].map(s => (
+            <div key={s} style={{ flex: 1, height: 4, borderRadius: 4, background: step >= s ? '#1D9E75' : '#e5e5e0' }} />
+          ))}
+        </div>
 
         {step === 1 && (
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Your business details</h2>
             <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Tell us who you are so we can set up your promotion.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {[
-                { label: 'Company / brand name *', field: 'companyName', type: 'text', placeholder: 'e.g. Freshlands Foods' },
-                { label: 'Contact person name *', field: 'contactName', type: 'text', placeholder: 'Your full name' },
-                { label: 'Email address *', field: 'email', type: 'email', placeholder: 'you@company.com' },
-                { label: 'Phone number *', field: 'phone', type: 'tel', placeholder: '+256 7XX XXX XXX' },
-              ].map(f => (
-                <div key={f.field}>
-                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>{f.label}</label>
-                  <input type={f.type} value={(form as any)[f.field]} onChange={e => set(f.field, e.target.value)} placeholder={f.placeholder}
-                    style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
-                </div>
-              ))}
-              <button onClick={() => {
-                if (!form.companyName || !form.contactName || !form.email || !form.phone) { alert('Please fill in all fields'); return }
-                setStep(2)
-              }} style={{ width: '100%', padding: '13px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+              <div><label style={labelStyle}>Company / brand name *</label><input style={inputStyle} value={form.companyName} onChange={e => set('companyName', e.target.value)} placeholder="Your company name" /></div>
+              <div><label style={labelStyle}>Contact person name *</label><input style={inputStyle} value={form.contactName} onChange={e => set('contactName', e.target.value)} placeholder="Your full name" /></div>
+              <div><label style={labelStyle}>Email address *</label><input style={inputStyle} type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="you@company.com" /></div>
+              <div><label style={labelStyle}>Phone number *</label><input style={inputStyle} type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+1 555 000 0000" /></div>
+              <button onClick={() => { if (!form.companyName || !form.contactName || !form.email || !form.phone) { alert('Please fill in all fields'); return } setStep(2) }}
+                style={{ width: '100%', padding: '14px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
                 Next: Promotion details →
               </button>
             </div>
@@ -140,78 +118,32 @@ export default function LaunchPage() {
         {step === 2 && (
           <div>
             <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Promotion details</h2>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Set the rules and dates for your promotion.</p>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Tell us about your promotion and what customers need to buy.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div><label style={labelStyle}>Promotion name *</label><input style={inputStyle} value={form.promoName} onChange={e => set('promoName', e.target.value)} placeholder="e.g. Summer Win Big" /></div>
+              <div><label style={labelStyle}>Description</label><input style={inputStyle} value={form.description} onChange={e => set('description', e.target.value)} placeholder="Brief description (optional)" /></div>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Promotion name *</label>
-                <input type="text" value={form.promoName} onChange={e => set('promoName', e.target.value)} placeholder="e.g. Win with Freshlands"
-                  style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Description (optional)</label>
-                <textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Brief description of your promotion..."
-                  style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff', resize: 'vertical', minHeight: 72 }} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Min spend (UGX) *</label>
-                  <input type="number" value={form.minSpend} onChange={e => set('minSpend', e.target.value)} placeholder="30000"
-                    style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Max entries/person</label>
-                  <select value={form.maxEntries} onChange={e => set('maxEntries', e.target.value)}
-                    style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }}>
-                    {[1,2,3,5,10].map(n => <option key={n} value={n}>{n}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Start date *</label>
-                  <input type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)}
-                    style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>End date *</label>
-                  <input type="date" value={form.endDate} onChange={e => set('endDate', e.target.value)}
-                    style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff' }} />
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Draw date *</label>
-                <input type="date" value={form.drawDate} onChange={e => set('drawDate', e.target.value)}
-                  style={{ width: '100%', padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff' }} />
-              </div>
-
-              {/* Product keywords — the key new field */}
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 4 }}>
-                  Promoted product names *
-                </label>
-                <p style={{ fontSize: 12, color: '#666', marginBottom: 10, lineHeight: 1.5 }}>
-                  List the exact product names or keywords that appear on receipts. The AI will look for these items on each receipt and only count their spend towards the minimum.
-                </p>
-                <div style={{ background: '#E8F8F2', border: '1px solid #9FE1CB', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#085041', marginBottom: 10 }}>
-                  Example: "Freshlands Pickle", "Freshlands Hot Sauce", "Freshlands" — add each product or brand name separately.
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <label style={labelStyle}>Promoted products / brands *</label>
+                <p style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>Customers must buy these products to qualify. Add one per line.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
                   {form.productKeywords.map((kw, i) => (
                     <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <input type="text" value={kw} onChange={e => setKeyword(i, e.target.value)}
-                        placeholder={`Product name ${i + 1} e.g. Freshlands Pickle`}
-                        style={{ flex: 1, padding: '10px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff' }} />
+                      <input value={kw} onChange={e => setKeyword(i, e.target.value)} placeholder={`Brand or product name ${i + 1}`}
+                        style={{ flex: 1, padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff' }} />
                       {form.productKeywords.length > 1 && (
                         <button onClick={() => removeKeyword(i)} style={{ width: 32, height: 32, background: '#FCEBEB', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 16, color: '#A32D2D', flexShrink: 0 }}>×</button>
                       )}
                     </div>
                   ))}
                 </div>
-                <button onClick={addKeyword} style={{ width: '100%', padding: '8px', background: '#fff', border: '1.5px dashed #d0d0c8', borderRadius: 10, fontSize: 13, color: '#666', cursor: 'pointer', marginTop: 8 }}>
-                  + Add another product
-                </button>
+                <button onClick={addKeyword} style={{ width: '100%', padding: '10px', background: '#fff', border: '1.5px dashed #d0d0c8', borderRadius: 10, fontSize: 14, color: '#666', cursor: 'pointer' }}>+ Add another product</button>
               </div>
-
+              <div><label style={labelStyle}>Minimum spend on promoted products *</label><input style={inputStyle} type="number" value={form.minSpend} onChange={e => set('minSpend', e.target.value)} placeholder="e.g. 50" /></div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}><label style={labelStyle}>Start date *</label><input style={inputStyle} type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)} /></div>
+                <div style={{ flex: 1 }}><label style={labelStyle}>End date *</label><input style={inputStyle} type="date" value={form.endDate} onChange={e => set('endDate', e.target.value)} /></div>
+              </div>
+              <div><label style={labelStyle}>Draw date *</label><input style={inputStyle} type="date" value={form.drawDate} onChange={e => set('drawDate', e.target.value)} /></div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setStep(1)} style={{ flex: 1, padding: '13px', background: '#fff', color: '#1a1a18', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>← Back</button>
                 <button onClick={() => {
@@ -233,8 +165,8 @@ export default function LaunchPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
               {form.prizes.map((prize, i) => (
                 <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <div style={{ width: 28, height: 28, background: '#E8F8F2', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#085041', flexShrink: 0 }}>{i+1}</div>
-                  <input type="text" value={prize} onChange={e => setPrize(i, e.target.value)} placeholder={`Prize ${i+1} e.g. UGX 1,000,000`}
+                  <div style={{ width: 28, height: 28, background: '#E8F8F2', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#085041', flexShrink: 0 }}>{i + 1}</div>
+                  <input type="text" value={prize} onChange={e => setPrize(i, e.target.value)} placeholder={`Prize ${i + 1} e.g. $1,000 cash`}
                     style={{ flex: 1, padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff' }} />
                   {form.prizes.length > 1 && (
                     <button onClick={() => removePrize(i)} style={{ width: 32, height: 32, background: '#FCEBEB', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 16, color: '#A32D2D', flexShrink: 0 }}>×</button>
@@ -252,7 +184,7 @@ export default function LaunchPage() {
               {[
                 ['Company', form.companyName],
                 ['Promotion', form.promoName],
-                ['Min spend on promoted products', `UGX ${parseInt(form.minSpend||'0').toLocaleString()}`],
+                ['Min spend on promoted products', form.minSpend ? `${form.minSpend}` : '—'],
                 ['Promoted products', form.productKeywords.filter(Boolean).join(', ')],
                 ['Draw date', form.drawDate],
                 ['Prizes', `${form.prizes.filter(Boolean).length} prize(s)`],
@@ -262,15 +194,23 @@ export default function LaunchPage() {
                   <span style={{ fontWeight: 600, textAlign: 'right' }}>{value}</span>
                 </div>
               ))}
-              <div style={{ borderTop: '1px solid #e5e5e0', paddingTop: 8, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                <span style={{ fontWeight: 700 }}>Promotion fee</span>
-                <span style={{ fontWeight: 700, color: '#1D9E75' }}>UGX 250,000</span>
-              </div>
+              {fee && (
+                <div style={{ borderTop: '1px solid #e5e5e0', paddingTop: 8, marginTop: 4, display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                  <span style={{ fontWeight: 700 }}>Promotion fee</span>
+                  <span style={{ fontWeight: 700, color: '#1D9E75' }}>{fee.currency} {fee.amount.toLocaleString()}</span>
+                </div>
+              )}
             </div>
 
-            <div style={{ background: '#FFF8E6', border: '1px solid #FAC775', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#633806', marginBottom: 16 }}>
-              Payment of UGX 250,000 will be collected by our team before your promotion goes live.
-            </div>
+            {fee && (
+              <div style={{ background: '#FFF8E6', border: '1px solid #FAC775', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#633806', marginBottom: 16 }}>
+                Payment of <strong>{fee.currency} {fee.amount.toLocaleString()}</strong> will be collected by our team before your promotion goes live.
+                {fee.description && <span> {fee.description}</span>}
+              </div>
+            )}
+
+            {error && <div style={{ background: '#FCEBEB', color: '#791F1F', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 14 }}>{error}</div>}
+
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setStep(2)} style={{ flex: 1, padding: '13px', background: '#fff', color: '#1a1a18', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>← Back</button>
               <button onClick={handleSubmit} disabled={submitting || form.prizes.filter(Boolean).length === 0}
