@@ -64,60 +64,20 @@ export default function EnterPage({ params }: { params: { id: string } }) {
     setStep('verifying')
     try {
       // Compress image before converting to base64 to stay under Vercel 4.5MB limit
-      const compressImage = (f: File): Promise<{base64: string, type: string}> => new Promise((res, rej) => {
-        const extractBase64 = (dataUrl: string): string => {
+      // Convert file to base64 directly — simple and reliable across all browsers
+      const toBase64 = (f: File): Promise<{base64: string, type: string}> => new Promise((res, rej) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const dataUrl = reader.result as string
           const parts = dataUrl.split(',')
-          return parts.length > 1 ? parts[1] : dataUrl
+          const base64 = parts.length > 1 ? parts[1] : dataUrl
+          const type = f.type || 'image/jpeg'
+          res({ base64, type })
         }
-
-        if (f.type === 'application/pdf') {
-          const r = new FileReader()
-          r.onload = () => res({ base64: extractBase64(r.result as string), type: 'application/pdf' })
-          r.onerror = rej
-          r.readAsDataURL(f)
-          return
-        }
-
-        // Use createObjectURL — reliable across Firefox, Chrome, and Chrome Android
-        const objUrl = URL.createObjectURL(f)
-        const img = new Image()
-        img.onload = () => {
-          URL.revokeObjectURL(objUrl)
-          const MAX_B64 = 800 * 1024
-          let quality = 0.75
-          let maxDim = 1000
-
-          const compress = (): string => {
-            let w = img.width, h = img.height
-            if (w > maxDim || h > maxDim) {
-              if (w > h) { h = Math.round(h * maxDim / w); w = maxDim }
-              else { w = Math.round(w * maxDim / h); h = maxDim }
-            }
-            const canvas = document.createElement('canvas')
-            canvas.width = w; canvas.height = h
-            const ctx = canvas.getContext('2d')!
-            ctx.drawImage(img, 0, 0, w, h)
-            return canvas.toDataURL('image/jpeg', quality)
-          }
-
-          let result = compress()
-          let b64 = extractBase64(result)
-          if (b64.length > MAX_B64) { quality = 0.60; maxDim = 800; result = compress(); b64 = extractBase64(result) }
-          if (b64.length > MAX_B64) { quality = 0.45; maxDim = 600; result = compress(); b64 = extractBase64(result) }
-
-          res({ base64: b64, type: 'image/jpeg' })
-        }
-        img.onerror = () => {
-          URL.revokeObjectURL(objUrl)
-          // Fallback to FileReader if createObjectURL fails
-          const r = new FileReader()
-          r.onload = () => res({ base64: extractBase64(r.result as string), type: 'image/jpeg' })
-          r.onerror = rej
-          r.readAsDataURL(f)
-        }
-        img.src = objUrl
+        reader.onerror = rej
+        reader.readAsDataURL(f)
       })
-      const { base64, type: compressedType } = await compressImage(file!)
+      const { base64, type: compressedType } = await toBase64(file!)
       const res = await fetch('/api/entries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
