@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { imageBase64, mediaType, minSpend, currency, promotionId, name, phone, email, productKeywords } = body
 
-    console.log('[entries] Request received:', {
+    console.warn('[entries] Request received:', {
       hasImage: !!imageBase64,
       imageLength: imageBase64?.length || 0,
       mediaType,
@@ -44,13 +44,13 @@ export async function POST(req: NextRequest) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     const anthropicKey = process.env.ANTHROPIC_API_KEY
 
-    console.log('[entries] Keys present:', { hasServiceKey: !!serviceKey, hasAnthropicKey: !!anthropicKey })
+    console.warn('[entries] Keys present:', { hasServiceKey: !!serviceKey, hasAnthropicKey: !!anthropicKey })
 
     const ticket = 'RR-' + Math.random().toString(36).substring(2, 10).toUpperCase()
     const safeMediaType = normaliseMediaType(mediaType || '')
     const keywords: string[] = Array.isArray(productKeywords) && productKeywords.length > 0 ? productKeywords : []
 
-    console.log('[entries] Safe media type:', safeMediaType, '| Keywords:', keywords)
+    console.warn('[entries] Safe media type:', safeMediaType, '| Keywords:', keywords)
 
     let aiResult: any = {
       verification_status: 'manual_review',
@@ -65,10 +65,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (!anthropicKey) {
-      console.log('[entries] No Anthropic key — skipping AI')
+      console.warn('[entries] No Anthropic key — skipping AI')
     } else {
       try {
-        console.log('[entries] Calling Anthropic API...')
+        console.warn('[entries] Calling Anthropic API...')
         const anthropic = new Anthropic({ apiKey: anthropicKey })
 
         const keywordList = keywords.join('", "')
@@ -135,10 +135,10 @@ Set to "manual_review" only if receipt is genuinely unreadable or total clearly 
         })
 
         const raw = response.content.map((c: any) => c.text || '').join('').replace(/```json|```/g, '').trim()
-        console.log('[entries] AI raw response:', raw.substring(0, 500))
+        console.warn('[entries] AI raw response:', raw.substring(0, 500))
 
         const parsed = JSON.parse(raw)
-        console.log('[entries] AI parsed:', parsed)
+        console.warn('[entries] AI parsed:', parsed)
 
         let matchedItems: string[] = []
         const matchedTotal = parsed.promoted_items_total || 0
@@ -157,7 +157,7 @@ Set to "manual_review" only if receipt is genuinely unreadable or total clearly 
         const hasItems = keywords.length === 0 || matchedItems.length > 0
         const isReadable = (parsed.confidence || 0) >= 40
 
-        console.log('[entries] Checks:', { amountToCheck, minSpend, meetsMinimum, hasItems, isReadable, status: parsed.verification_status })
+        console.warn('[entries] Checks:', { amountToCheck, minSpend, meetsMinimum, hasItems, isReadable, status: parsed.verification_status })
 
         if (meetsMinimum && hasItems && isReadable && parsed.verification_status === 'approved') {
           aiResult = { ...parsed, promoted_items_found: matchedItems, verification_status: 'approved' }
@@ -175,7 +175,7 @@ Set to "manual_review" only if receipt is genuinely unreadable or total clearly 
       }
     }
 
-    console.log('[entries] Final aiResult status:', aiResult.verification_status, '| confidence:', aiResult.confidence)
+    console.warn('[entries] Final aiResult status:', aiResult.verification_status, '| confidence:', aiResult.confidence)
 
     const isApproved = aiResult.verification_status === 'approved'
 
@@ -201,9 +201,9 @@ Set to "manual_review" only if receipt is genuinely unreadable or total clearly 
         console.error('[entries] DB ERROR:', dbError.message, dbError.details, dbError.hint)
         return NextResponse.json({ error: 'Failed to save entry: ' + dbError.message }, { status: 500 })
       }
-      console.log('[entries] Saved to DB successfully. Ticket:', ticket)
+      console.warn('[entries] Saved to DB successfully. Ticket:', ticket)
     } else {
-      console.log('[entries] No service key — entry not saved to DB')
+      console.warn('[entries] No service key — entry not saved to DB')
     }
 
     return NextResponse.json({
