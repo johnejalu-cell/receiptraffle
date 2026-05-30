@@ -202,7 +202,10 @@ Set to "manual_review" only if receipt is genuinely unreadable or total clearly 
         customer_phone: phone,
         customer_email: email || null,
         ticket_number: ticket,
-        amount: aiResult.promoted_items_total || aiResult.total_amount || 0,
+        // Save verified spend: promoted items total if keywords, otherwise receipt total
+        amount: keywords.length > 0
+          ? (aiResult.promoted_items_total || 0)
+          : (aiResult.total_amount || 0),
         retailer: aiResult.retailer || 'Unknown',
         receipt_date: aiResult.date || null,
         currency: aiResult.currency || currency || 'USD',
