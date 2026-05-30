@@ -71,7 +71,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
           const dataUrl = reader.result as string
           const parts = dataUrl.split(',')
           const base64 = parts.length > 1 ? parts[1] : dataUrl
-          const type = f.type || 'image/jpeg'
+          const type = (f.type && f.type !== '') ? f.type : 'image/jpeg'
           res({ base64, type })
         }
         reader.onerror = rej
@@ -205,7 +205,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '18px', background: '#1D9E75', color: '#fff', borderRadius: 12, cursor: 'pointer', fontSize: 16, fontWeight: 700 }}>
                   <span style={{ fontSize: 24 }}>📷</span>
                   Take a photo now
-                  <input type="file" accept="image/*" capture="environment" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} style={{ display: 'none' }} />
+                  <input type="file" accept="image/*" capture="environment" onChange={e => { const f = e.target.files?.[0]; if (f) { const safeFile = f.type ? f : new File([f], f.name || 'photo.jpg', { type: 'image/jpeg' }); handleFile(safeFile) } }} style={{ display: 'none' }} />
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '18px', background: '#fff', color: '#1a1a18', border: '1.5px solid #d0d0c8', borderRadius: 12, cursor: 'pointer', fontSize: 16, fontWeight: 600 }}>
                   <span style={{ fontSize: 24 }}>🖼</span>
