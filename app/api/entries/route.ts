@@ -1,5 +1,3 @@
-// v9 - fresh build
-
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -19,14 +17,26 @@ function fuzzyMatch(item: string, keyword: string): boolean {
   return checkWords.every(w => itemLower.includes(w))
 }
 
+// Increase body size limit to 10MB to handle large receipt images from mobile
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { imageBase64, mediaType, minSpend, currency, promotionId, name, phone, email, productKeywords } = body
 
+    const b64Length = imageBase64?.length || 0
+    const estimatedKB = Math.round(b64Length * 0.75 / 1024)
     console.warn('[entries] Request received:', {
       hasImage: !!imageBase64,
-      imageLength: imageBase64?.length || 0,
+      imageLength: b64Length,
+      estimatedKB,
       mediaType,
       name,
       phone,
@@ -34,6 +44,8 @@ export async function POST(req: NextRequest) {
       minSpend,
       keywords: productKeywords,
     })
+    // Return image stats in response for debugging
+    const debugInfo = { b64Length, estimatedKB, mediaType }
 
     if (!name || !phone) {
       return NextResponse.json({ error: 'Missing name or phone' }, { status: 400 })
@@ -136,9 +148,16 @@ Set to "manual_review" only if receipt is genuinely unreadable or total clearly 
           }]
         })
 
-        const raw = response.content.map((c: any) => c.text || '').join('').replace(/```json|```/g, '').trim()
-        console.warn('[entries] AI raw response:', raw.substring(0, 500))
+        const rawText = response.content.map((c: any) => c.text || '').join('')
+        console.warn('[entries] AI raw response:', rawText.substring(0, 500))
 
+        // Robust JSON extraction — find the first { and last } in the response
+        const firstBrace = rawText.indexOf('{')
+        const lastBrace = rawText.lastIndexOf('}')
+        if (firstBrace === -1 || lastBrace === -1) {
+          throw new Error('No JSON object found in AI response: ' + rawText.substring(0, 200))
+        }
+        const raw = rawText.substring(firstBrace, lastBrace + 1)
         const parsed = JSON.parse(raw)
         console.warn('[entries] AI parsed:', parsed)
 
@@ -173,7 +192,9 @@ Set to "manual_review" only if receipt is genuinely unreadable or total clearly 
 
       } catch (aiError: any) {
         console.error('[entries] AI ERROR:', aiError.message, aiError.stack)
-        aiResult.verification_reason = 'AI processing error — sent for manual review'
+        // Expose the real error so admin can see it
+        const errMsg = aiError?.message || aiError?.toString() || 'Unknown error'
+        aiResult.verification_reason = 'AI error: ' + errMsg
       }
     }
 
@@ -212,6 +233,7 @@ Set to "manual_review" only if receipt is genuinely unreadable or total clearly 
       aiResult,
       verificationStatus: isApproved ? 'approved' : 'manual_review',
       ticketNumber: ticket,
+      debug: debugInfo,
     })
 
   } catch (error: any) {
