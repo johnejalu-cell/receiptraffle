@@ -17,15 +17,6 @@ function fuzzyMatch(item: string, keyword: string): boolean {
   return checkWords.every(w => itemLower.includes(w))
 }
 
-// Increase body size limit to 10MB to handle large receipt images from mobile
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-  },
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
