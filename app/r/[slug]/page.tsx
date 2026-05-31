@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = 'https://qnpjawyeekhkzvrorqyv.supabase.co'
 
@@ -7,6 +6,7 @@ export default async function RedirectPage({ params }: { params: { slug: string 
   try {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (serviceKey) {
+      const { createClient } = await import('@supabase/supabase-js')
       const supabase = createClient(SUPABASE_URL, serviceKey, {
         auth: { autoRefreshToken: false, persistSession: false }
       })
