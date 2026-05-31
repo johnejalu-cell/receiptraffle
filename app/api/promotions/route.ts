@@ -80,6 +80,8 @@ export async function POST(req: NextRequest) {
         emoji: '🎁',
         color: '#1D9E75',
         entries_count: 0,
+        logo_url: body.logoUrl || null,
+        terms_conditions: body.termsConditions || null,
       })
       .select()
       .single()
