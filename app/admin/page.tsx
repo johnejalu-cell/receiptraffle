@@ -232,7 +232,7 @@ export default function AdminPage() {
   if (!authed) return (
     <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafaf9', padding: '1rem' }}>
       <div style={{ width: '100%', maxWidth: 340, background: '#fff', border: '1px solid #e5e5e0', borderRadius: 16, padding: '2rem', textAlign: 'center' }}>
-        <div style={{ fontSize: 36, marginBottom: 12 }}>&#x1F510;</div>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>🔐</div>
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Admin access</h1>
         <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Enter your admin PIN</p>
         {pinError && <div style={{ background: '#FCEBEB', color: '#791F1F', padding: '8px 12px', borderRadius: 8, fontSize: 13, marginBottom: 14 }}>{pinError}</div>}
@@ -248,14 +248,14 @@ export default function AdminPage() {
     <main style={{ minHeight: '100vh', background: '#fafaf9' }}>
       <div style={{ background: '#1a1a2e', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ fontSize: 22 }}>&#x1F9FE;</div>
+          <div style={{ fontSize: 22 }}>🧾</div>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>ReceiptRaffle Admin</div>
             <div style={{ fontSize: 11, color: '#9BA4B5' }}>Live data</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={loadData} style={{ background: 'none', border: '1px solid #444', borderRadius: 8, padding: '5px 12px', color: '#9BA4B5', fontSize: 12, cursor: 'pointer' }}>&#x21BB; Refresh</button>
+          <button onClick={loadData} style={{ background: 'none', border: '1px solid #444', borderRadius: 8, padding: '5px 12px', color: '#9BA4B5', fontSize: 12, cursor: 'pointer' }}>↻ Refresh</button>
           <button onClick={() => setAuthed(false)} style={{ background: 'none', border: '1px solid #444', borderRadius: 8, padding: '5px 12px', color: '#9BA4B5', fontSize: 12, cursor: 'pointer' }}>Sign out</button>
         </div>
       </div>
@@ -297,13 +297,13 @@ export default function AdminPage() {
             </div>
             {pendingEntries.length > 0 && (
               <div style={{ background: '#FFF8E6', border: '1px solid #FAC775', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#633806', marginBottom: 10 }}>
-                &#x26A0; <strong>{pendingEntries.length} entries</strong> need manual review.
+                ⚠ <strong>{pendingEntries.length} entries</strong> need manual review.
                 <button onClick={() => setTab('review')} style={{ background: 'none', border: 'none', color: '#854F0B', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, marginLeft: 4 }}>Review now</button>
               </div>
             )}
             {pendingSubmissions.length > 0 && (
               <div style={{ background: '#E6F1FB', border: '1px solid #93C5FD', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#0C447C' }}>
-                &#x1F4CB; <strong>{pendingSubmissions.length} promotion submissions</strong> awaiting approval.
+                📋 <strong>{pendingSubmissions.length} promotion submissions</strong> awaiting approval.
                 <button onClick={() => setTab('submissions')} style={{ background: 'none', border: 'none', color: '#0C447C', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, marginLeft: 4 }}>View</button>
               </div>
             )}
@@ -342,8 +342,8 @@ export default function AdminPage() {
                   <>
 
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={() => activateSubmission(s.id)} style={{ flex: 1, padding: '10px', background: '#E1F5EE', color: '#085041', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>&#x2713; Activate</button>
-                      <button onClick={() => declineSubmission(s.id)} style={{ flex: 1, padding: '10px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>&#x2717; Decline</button>
+                      <button onClick={() => activateSubmission(s.id)} style={{ flex: 1, padding: '10px', background: '#E1F5EE', color: '#085041', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>✓ Activate</button>
+                      <button onClick={() => declineSubmission(s.id)} style={{ flex: 1, padding: '10px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>✗ Decline</button>
                     </div>
                   </>
                 )}
@@ -392,7 +392,7 @@ export default function AdminPage() {
                     <button onClick={() => { setPromoFilter(p.id); setTab('entries') }} style={{ flex: 1, padding: '8px', background: '#f5f5f0', color: '#1a1a18', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View entries</button>
                   </div>
                   <button onClick={() => deletePromotion(p.id, p.promo_name)} style={{ width: '100%', padding: '8px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>Delete promotion</button>
-                  <button onClick={() => setQrModal({ url: `https://receiptraffle-ygef.vercel.app/enter/${p.id}`, name: p.promo_name })} style={{ width: '100%', padding: '8px', background: '#E8F8F2', color: '#085041', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>&#x1F4F1; QR code</button>
+                  <button onClick={() => setQrModal({ url: `https://receiptraffle-ygef.vercel.app/enter/${p.id}`, name: p.promo_name })} style={{ width: '100%', padding: '8px', background: '#E8F8F2', color: '#085041', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>📱 QR code</button>
                 </div>
               )
             })}
@@ -486,7 +486,7 @@ export default function AdminPage() {
         {tab === 'review' && !loading && (
           <div>
             <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Manual review queue ({pendingEntries.length})</p>
-            {pendingEntries.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#1D9E75', fontWeight: 600 }}>&#x2713; All clear Â no entries need review</div>}
+            {pendingEntries.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#1D9E75', fontWeight: 600 }}>✓ All clear Â no entries need review</div>}
             {pendingEntries.map(e => (
               <div key={e.id} style={{ background: '#fff', border: '1px solid #FAC775', borderRadius: 14, padding: '1.25rem', marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -506,11 +506,11 @@ export default function AdminPage() {
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  <button onClick={() => viewReceipt(e)} style={{ flex: 1, padding: '8px', background: '#f5f5f0', color: '#333', border: '1px solid #d0d0c8', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>&#x1F5BC; View receipt</button>
+                  <button onClick={() => viewReceipt(e)} style={{ flex: 1, padding: '8px', background: '#f5f5f0', color: '#333', border: '1px solid #d0d0c8', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>🖼 View receipt</button>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => updateEntry(e.id, 'approved')} style={{ flex: 1, padding: '8px', background: '#E1F5EE', color: '#085041', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>&#x2713; Approve</button>
-                  <button onClick={() => updateEntry(e.id, 'rejected')} style={{ flex: 1, padding: '8px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>&#x2717; Reject</button>
+                  <button onClick={() => updateEntry(e.id, 'approved')} style={{ flex: 1, padding: '8px', background: '#E1F5EE', color: '#085041', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>✓ Approve</button>
+                  <button onClick={() => updateEntry(e.id, 'rejected')} style={{ flex: 1, padding: '8px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>✗ Reject</button>
                 </div>
               </div>
             ))}
@@ -529,7 +529,7 @@ export default function AdminPage() {
                   <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>{eligible} eligible entries Â· Draw: {p.draw_date}</div>
                   {(winners[p.id] || []).map((w, i) => (
                     <div key={i} style={{ background: '#E1F5EE', borderRadius: 10, padding: '10px 14px', marginBottom: 8 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#085041' }}>&#x1F3C6; Winner #{i+1}: {w.name}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#085041' }}>🏆 Winner #{i+1}: {w.name}</div>
                       <div style={{ fontSize: 11, color: '#0F6E56' }}>{w.time}</div>
                     </div>
                   ))}
@@ -606,7 +606,7 @@ export default function AdminPage() {
               <a href={`https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(qrModal.url)}&margin=20`}
                 download={`${qrModal.name}-QR.png`} target="_blank" rel="noopener noreferrer"
                 style={{ flex: 1, padding: '10px', background: '#1D9E75', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none', display: 'block' }}>
-                &#x2B07; Download QR
+                ⬇ Download QR
               </a>
               <button onClick={() => setQrModal(null)} style={{ flex: 1, padding: '10px', background: '#f5f5f0', color: '#333', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Close</button>
             </div>
@@ -619,7 +619,7 @@ export default function AdminPage() {
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: '1.25rem', maxWidth: 480, width: '100%', maxHeight: '90vh', overflow: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div style={{ fontSize: 14, fontWeight: 700 }}>Receipt Â {receiptModal.name}</div>
-              <button onClick={() => setReceiptModal(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666' }}>&times;</button>
+              <button onClick={() => setReceiptModal(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666' }}>×</button>
             </div>
             <img src={receiptModal.url} alt="Receipt" style={{ width: '100%', borderRadius: 8, border: '1px solid #e5e5e0' }}
               onError={() => alert('Could not load receipt image. It may not have been stored.')} />
