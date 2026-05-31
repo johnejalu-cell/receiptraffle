@@ -12,7 +12,6 @@ export async function GET() {
       auth: { autoRefreshToken: false, persistSession: false }
     })
 
-    // Return ALL promotions (active + pending) for admin view
     const { data, error } = await supabase
       .from('promotion_submissions')
       .select('*')
@@ -39,6 +38,26 @@ export async function DELETE(req: NextRequest) {
       auth: { autoRefreshToken: false, persistSession: false }
     })
 
+    // Fetch the promotion details before deleting
+    const { data: promo } = await supabase
+      .from('promotion_submissions')
+      .select('promo_name, company_name')
+      .eq('id', id)
+      .single()
+
+    // Stamp the promotion name and company onto all linked entries before unlinking
+    if (promo) {
+      await supabase
+        .from('customer_entries')
+        .update({
+          promotion_name: promo.promo_name,
+          company_name: promo.company_name,
+          promotion_id: null
+        })
+        .eq('promotion_id', id)
+    }
+
+    // Now delete the promotion
     const { error } = await supabase
       .from('promotion_submissions')
       .delete()
