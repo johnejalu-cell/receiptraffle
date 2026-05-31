@@ -2,6 +2,40 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
+const DEFAULT_TCS = `TERMS AND CONDITIONS
+
+1. PROMOTER
+[Company Name], [Registered Address], [Company Number].
+
+2. PROMOTION PERIOD
+This promotion runs from [Start Date] to [End Date]. The prize draw will take place on [Draw Date].
+
+3. ELIGIBILITY
+Open to residents of [Country/Region] aged 18 or over, except employees of the Promoter and their immediate families.
+
+4. HOW TO ENTER
+Purchase [Product Name] with a minimum spend of [Minimum Amount] during the promotion period. Upload your receipt at [URL] and complete the entry form. One entry per receipt. Maximum [X] entries per person.
+
+5. THE PRIZE
+[Describe prize(s) in full]. The prize is non-transferable and no cash alternative will be offered.
+
+6. WINNER SELECTION
+Winners will be selected by random draw from all valid entries on [Draw Date]. The Promoter's decision is final.
+
+7. WINNER NOTIFICATION
+Winners will be contacted by phone or email within 14 days of the draw. If a winner cannot be contacted within 28 days, the Promoter reserves the right to select an alternative winner.
+
+8. PRIZE CLAIM
+The prize must be claimed within [X] days of notification. Failure to claim within this period may result in forfeiture.
+
+9. DATA PROTECTION
+Personal data collected will be used solely to administer this promotion and will not be shared with third parties except as required by law. Data will be deleted within 6 months of the promotion end date.
+
+10. GENERAL
+This promotion is subject to [Country] law. The Promoter reserves the right to amend or withdraw the promotion at any time. By entering, participants agree to these terms and conditions.
+
+Prepared in accordance with the CAP Code (UK Code of Non-broadcast Advertising and Sales Promotion) and the ASA guidelines on sales promotions.`
+
 export default function LaunchPage() {
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
@@ -9,6 +43,10 @@ export default function LaunchPage() {
   const [ref, setRef] = useState('')
   const [error, setError] = useState('')
   const [fee, setFee] = useState<{ amount: number, currency: string, description: string } | null>(null)
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState('')
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [logoUrl, setLogoUrl] = useState('')
 
   const [form, setForm] = useState({
     companyName: '', contactName: '', email: '', phone: '',
@@ -16,6 +54,7 @@ export default function LaunchPage() {
     startDate: '', endDate: '', drawDate: '',
     prizes: [''],
     productKeywords: [''],
+    termsConditions: DEFAULT_TCS,
   })
 
   useEffect(() => {
@@ -30,10 +69,45 @@ export default function LaunchPage() {
   function setKeyword(i: number, val: string) { setForm(f => { const k = [...f.productKeywords]; k[i] = val; return { ...f, productKeywords: k } }) }
   function removeKeyword(i: number) { setForm(f => ({ ...f, productKeywords: f.productKeywords.filter((_, idx) => idx !== i) })) }
 
+  function handleLogoFile(f: File) {
+    setLogoFile(f)
+    setLogoPreview(URL.createObjectURL(f))
+  }
+
+  async function uploadLogo(): Promise<string> {
+    if (!logoFile) return ''
+    setLogoUploading(true)
+    try {
+      const toBase64 = (f: File) => new Promise<string>((res, rej) => {
+        const r = new FileReader()
+        r.onload = () => res((r.result as string).split(',')[1])
+        r.onerror = rej
+        r.readAsDataURL(f)
+      })
+      const base64 = await toBase64(logoFile)
+      const res = await fetch('/api/upload-logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64, mediaType: logoFile.type, fileName: logoFile.name })
+      })
+      const data = await res.json()
+      setLogoUploading(false)
+      return data.url || ''
+    } catch (e) {
+      setLogoUploading(false)
+      return ''
+    }
+  }
+
   async function handleSubmit() {
     setSubmitting(true)
     setError('')
     try {
+      let finalLogoUrl = logoUrl
+      if (logoFile && !logoUrl) {
+        finalLogoUrl = await uploadLogo()
+        setLogoUrl(finalLogoUrl)
+      }
       const res = await fetch('/api/promotions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,6 +125,8 @@ export default function LaunchPage() {
           drawDate: form.drawDate,
           prizes: form.prizes.filter(Boolean),
           productKeywords: form.productKeywords.filter(Boolean),
+          logoUrl: finalLogoUrl,
+          termsConditions: form.termsConditions,
         })
       })
       const data = await res.json()
@@ -93,7 +169,7 @@ export default function LaunchPage() {
         <Link href="/" style={{ fontSize: 13, color: '#1D9E75', textDecoration: 'none', display: 'inline-block', marginBottom: 20 }}>← Back</Link>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Launch a promotion</h1>
         <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
-          {[1, 2, 3].map(s => (
+          {[1, 2, 3, 4].map(s => (
             <div key={s} style={{ flex: 1, height: 4, borderRadius: 4, background: step >= s ? '#1D9E75' : '#e5e5e0' }} />
           ))}
         </div>
@@ -107,7 +183,32 @@ export default function LaunchPage() {
               <div><label style={labelStyle}>Contact person name *</label><input style={inputStyle} value={form.contactName} onChange={e => set('contactName', e.target.value)} placeholder="Your full name" /></div>
               <div><label style={labelStyle}>Email address *</label><input style={inputStyle} type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="you@company.com" /></div>
               <div><label style={labelStyle}>Phone number *</label><input style={inputStyle} type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+1 555 000 0000" /></div>
-              <button onClick={() => { if (!form.companyName || !form.contactName || !form.email || !form.phone) { alert('Please fill in all fields'); return } setStep(2) }}
+
+              {/* Logo upload */}
+              <div>
+                <label style={labelStyle}>Brand logo (optional)</label>
+                <p style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>Shown next to your promotion. Square image works best. PNG or JPG.</p>
+                {!logoPreview ? (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', border: '1.5px dashed #d0d0c8', borderRadius: 10, cursor: 'pointer', fontSize: 14, color: '#666' }}>
+                    <span style={{ fontSize: 24 }}>🖼</span>
+                    Upload logo
+                    <input type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoFile(f) }} style={{ display: 'none' }} />
+                  </label>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <img src={logoPreview} alt="Logo preview" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 10, border: '1px solid #e5e5e0' }} />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1D9E75', marginBottom: 4 }}>✓ Logo uploaded</div>
+                      <label style={{ fontSize: 12, color: '#888', cursor: 'pointer', textDecoration: 'underline' }}>
+                        Change
+                        <input type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoFile(f) }} style={{ display: 'none' }} />
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button onClick={() => { if (!form.companyName || !form.contactName || !form.email || !form.phone) { alert('Please fill in all required fields'); return } setStep(2) }}
                 style={{ width: '100%', padding: '14px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
                 Next: Promotion details →
               </button>
@@ -177,14 +278,41 @@ export default function LaunchPage() {
             <button onClick={addPrize} style={{ width: '100%', padding: '10px', background: '#fff', border: '1.5px dashed #d0d0c8', borderRadius: 10, fontSize: 14, color: '#666', cursor: 'pointer', marginBottom: 20 }}>
               + Add another prize
             </button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setStep(2)} style={{ flex: 1, padding: '13px', background: '#fff', color: '#1a1a18', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>← Back</button>
+              <button onClick={() => {
+                if (form.prizes.filter(Boolean).length === 0) { alert('Please add at least one prize'); return }
+                setStep(4)
+              }} style={{ flex: 2, padding: '13px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+                Next: Terms & Conditions →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div>
+            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Terms & Conditions</h2>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>
+              We have pre-filled a template based on UK sales promotion regulations. Please review and edit all fields marked with [brackets] to match your promotion details. Customers will be able to read these before entering.
+            </p>
+            <div style={{ background: '#FFF8E6', border: '1px solid #FAC775', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#633806', marginBottom: 14 }}>
+              Important: Replace all [bracketed] placeholders with your actual details before submitting.
+            </div>
+            <textarea
+              value={form.termsConditions}
+              onChange={e => set('termsConditions', e.target.value)}
+              rows={20}
+              style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 13, background: '#fff', fontFamily: 'monospace', lineHeight: 1.6, resize: 'vertical' }}
+            />
 
             {/* Summary */}
-            <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 16 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginTop: 16, marginBottom: 16 }}>
               <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }}>Summary</div>
               {[
                 ['Company', form.companyName],
                 ['Promotion', form.promoName],
-                ['Min spend on promoted products', form.minSpend ? `${form.minSpend}` : '—'],
+                ['Min spend', form.minSpend ? `${form.minSpend}` : '—'],
                 ['Promoted products', form.productKeywords.filter(Boolean).join(', ')],
                 ['Draw date', form.drawDate],
                 ['Prizes', `${form.prizes.filter(Boolean).length} prize(s)`],
@@ -212,10 +340,10 @@ export default function LaunchPage() {
             {error && <div style={{ background: '#FCEBEB', color: '#791F1F', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 14 }}>{error}</div>}
 
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setStep(2)} style={{ flex: 1, padding: '13px', background: '#fff', color: '#1a1a18', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>← Back</button>
-              <button onClick={handleSubmit} disabled={submitting || form.prizes.filter(Boolean).length === 0}
-                style={{ flex: 2, padding: '13px', background: submitting ? '#9BA4B5' : '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer' }}>
-                {submitting ? 'Submitting...' : 'Submit promotion 🚀'}
+              <button onClick={() => setStep(3)} style={{ flex: 1, padding: '13px', background: '#fff', color: '#1a1a18', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>← Back</button>
+              <button onClick={handleSubmit} disabled={submitting || logoUploading}
+                style={{ flex: 2, padding: '13px', background: submitting || logoUploading ? '#9BA4B5' : '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: submitting || logoUploading ? 'not-allowed' : 'pointer' }}>
+                {logoUploading ? 'Uploading logo...' : submitting ? 'Submitting...' : 'Submit promotion'}
               </button>
             </div>
           </div>
