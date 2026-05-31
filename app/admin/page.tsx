@@ -169,6 +169,11 @@ export default function AdminPage() {
   promotions.forEach(p => { promotionMap[p.id] = p.promo_name })
 
   const filteredEntries = entries.filter(e => {
+    if (entryFilter === 'archived') {
+      // Archived = belonged to a deleted promotion
+      const matchSearch = !search || e.customer_name?.toLowerCase().includes(search.toLowerCase()) || e.ticket_number?.toLowerCase().includes(search.toLowerCase()) || e.customer_phone?.includes(search)
+      return !e.promotion_id && e.promotion_name && matchSearch
+    }
     const matchFilter = entryFilter === 'all' || e.verification_status === entryFilter
     const matchPromo = promoFilter === 'all' || e.promotion_id === promoFilter
     const matchSearch = !search || e.customer_name?.toLowerCase().includes(search.toLowerCase()) || e.ticket_number?.toLowerCase().includes(search.toLowerCase()) || e.customer_phone?.includes(search)
@@ -361,10 +366,10 @@ export default function AdminPage() {
                 <option value="all">All promotions</option>
                 {promotions.map(p => <option key={p.id} value={p.id}>{p.promo_name}</option>)}
               </select>
-              {['all','approved','manual_review','rejected'].map(f => (
+              {['all','approved','manual_review','rejected','archived'].map(f => (
                 <button key={f} onClick={() => setEntryFilter(f)}
                   style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid #d0d0c8', background: entryFilter === f ? '#1D9E75' : '#fff', color: entryFilter === f ? '#fff' : '#666', fontSize: 12, cursor: 'pointer', fontWeight: entryFilter === f ? 700 : 400 }}>
-                  {f === 'manual_review' ? 'Pending' : f.charAt(0).toUpperCase() + f.slice(1)}
+                  {f === 'manual_review' ? 'Pending' : f === 'archived' ? 'Archived' : f.charAt(0).toUpperCase() + f.slice(1)}
                 </button>
               ))}
             </div>
@@ -374,7 +379,7 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{e.customer_name}</div>
-                    <div style={{ fontSize: 12, color: '#1D9E75', fontWeight: 600 }}>{promotionMap[e.promotion_id] || e.promotion_name || 'Unknown promotion'}</div>
+                    <div style={{ fontSize: 12, color: e.promotion_id ? '#1D9E75' : '#999', fontWeight: 600 }}>{promotionMap[e.promotion_id] || e.promotion_name || 'Unknown promotion'}{e.company_name ? ' · ' + e.company_name : ''}{!e.promotion_id && e.promotion_name ? ' (archived)' : ''}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone}{e.customer_email ? ` · ${e.customer_email}` : ''}</div>
                     <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>{e.ai_result?.currency || e.currency || 'USD'} {parseInt(e.ai_result?.promoted_items_total || e.ai_result?.total_amount || e.amount || 0).toLocaleString()} · {e.ai_result?.retailer || e.retailer || 'Unknown'}</div>
                     <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Ticket: {e.ticket_number} · AI: {e.ai_confidence}% · {e.created_at?.split('T')[0]}</div>
