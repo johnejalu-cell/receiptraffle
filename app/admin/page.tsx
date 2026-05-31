@@ -20,6 +20,11 @@ export default function AdminPage() {
   const [feeForm, setFeeForm] = useState({ amount: '', currency: 'USD', description: '' })
   const [feeSaving, setFeeSaving] = useState(false)
   const [feeSaved, setFeeSaved] = useState(false)
+  const [qrModal, setQrModal] = useState<{url:string, name:string} | null>(null)
+  const [redirects, setRedirects] = useState<any[]>([])
+  const [newSlug, setNewSlug] = useState('')
+  const [newSlugPromo, setNewSlugPromo] = useState('')
+  const [slugSaving, setSlugSaving] = useState(false)
 
   async function viewReceipt(entry: any) {
     const path = entry.receipt_image_path || entry.ai_result?.receipt_image_path
@@ -48,6 +53,9 @@ export default function AdminPage() {
       setPromotions(promData.promotions || [])
       setEntries(entData.entries || [])
       setSubmissions(subData.submissions || [])
+      fetch('/api/admin/redirects').then(r => r.json()).then(d => {
+        setRedirects(d.redirects || [])
+      }).catch(() => {})
       fetch('/api/admin/fees').then(r => r.json()).then(d => {
         if (d.fee) {
           setFee(d.fee)
@@ -121,6 +129,44 @@ export default function AdminPage() {
     }
   }
 
+  async function saveRedirect() {
+    if (!newSlug || !newSlugPromo) { alert('Please enter both a slug and select a promotion'); return }
+    setSlugSaving(true)
+    try {
+      const res = await fetch('/api/admin/redirects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: newSlug, promotion_id: newSlugPromo })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setRedirects(prev => {
+          const filtered = prev.filter(r => r.slug !== data.redirect.slug)
+          return [data.redirect, ...filtered]
+        })
+        setNewSlug('')
+        setNewSlugPromo('')
+      } else {
+        alert('Error: ' + (data.error || 'Unknown'))
+      }
+    } catch (e) { alert('Error saving redirect') }
+    setSlugSaving(false)
+  }
+
+  async function deleteRedirect(slug: string) {
+    if (!confirm('Delete redirect /' + slug + '?')) return
+    try {
+      const res = await fetch('/api/admin/redirects', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug })
+      })
+      const data = await res.json()
+      if (data.success) setRedirects(prev => prev.filter(r => r.slug !== slug))
+      else alert('Error: ' + (data.error || 'Unknown'))
+    } catch (e) { alert('Error deleting redirect') }
+  }
+
   async function runDraw(promoId: string, promoName: string) {
     setDrawingId(promoId)
     await new Promise(r => setTimeout(r, 2000))
@@ -190,7 +236,7 @@ export default function AdminPage() {
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Admin access</h1>
         <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Enter your admin PIN</p>
         {pinError && <div style={{ background: '#FCEBEB', color: '#791F1F', padding: '8px 12px', borderRadius: 8, fontSize: 13, marginBottom: 14 }}>{pinError}</div>}
-        <input type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="" maxLength={6}
+        <input type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="ÂÂÂÂ" maxLength={6}
           onKeyDown={e => e.key === 'Enter' && checkPin()}
           style={{ width: '100%', padding: '12px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 22, textAlign: 'center', letterSpacing: 8, marginBottom: 12, background: '#f5f5f0' }} />
         <button onClick={checkPin} style={{ width: '100%', padding: '12px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Enter</button>
@@ -273,7 +319,7 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{s.promo_name}</div>
-                    <div style={{ fontSize: 12, color: '#888' }}>{s.company_name} · Ref: {s.ref}</div>
+                    <div style={{ fontSize: 12, color: '#888' }}>{s.company_name} Â· Ref: {s.ref}</div>
                   </div>
                   <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600,
                     background: s.status === 'active' ? '#E1F5EE' : s.status === 'declined' ? '#FCEBEB' : '#FFF8E6',
@@ -290,7 +336,7 @@ export default function AdminPage() {
                   <div>Submitted: <strong>{s.created_at?.split('T')[0]}</strong></div>
                 </div>
                 <div style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>
-                  Prizes: {Array.isArray(s.prizes) ? s.prizes.join(' · ') : s.prizes}
+                  Prizes: {Array.isArray(s.prizes) ? s.prizes.join(' Â· ') : s.prizes}
                 </div>
                 {s.status === 'pending' && (
                   <>
@@ -322,7 +368,7 @@ export default function AdminPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 700 }}>{p.promo_name}</div>
-                      <div style={{ fontSize: 12, color: '#888' }}>{p.company_name} · Draw: {p.draw_date}</div>
+                      <div style={{ fontSize: 12, color: '#888' }}>{p.company_name} Â· Draw: {p.draw_date}</div>
                     </div>
                     <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#E1F5EE', color: '#085041', fontWeight: 600 }}>Active</span>
                   </div>
@@ -345,7 +391,49 @@ export default function AdminPage() {
                     <button onClick={() => printEntries(p)} style={{ flex: 1, padding: '8px', background: '#E6F1FB', color: '#0C447C', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Print</button>
                     <button onClick={() => { setPromoFilter(p.id); setTab('entries') }} style={{ flex: 1, padding: '8px', background: '#f5f5f0', color: '#1a1a18', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View entries</button>
                   </div>
-                  <button onClick={() => deletePromotion(p.id, p.promo_name)} style={{ width: '100%', padding: '8px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Delete promotion</button>
+                  <button onClick={() => deletePromotion(p.id, p.promo_name)} style={{ width: '100%', padding: '8px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>Delete promotion</button>
+                  <button onClick={() => setQrModal({ url: `https://receiptraffle-ygef.vercel.app/enter/${p.id}`, name: p.promo_name })} style={{ width: '100%', padding: '8px', background: '#E8F8F2', color: '#085041', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>&#x1F4F1; QR code</button>
+                </div>
+              )
+            })}
+          </div>
+
+          <div style={{ marginTop: 24 }}>
+            <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>QR code redirects</p>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>Link an existing product QR code to a promotion. Give the promoter this redirect URL - they update their QR code destination to point to it.</p>
+            <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Short keyword (slug)</label>
+                  <input value={newSlug} onChange={e => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                    placeholder="e.g. krackles" style={{ width: '100%', padding: '10px 12px', border: '1px solid #d0d0c8', borderRadius: 8, fontSize: 14, background: '#fff' }} />
+                  {newSlug && <div style={{ fontSize: 11, color: '#1D9E75', marginTop: 4 }}>Redirect URL: receiptraffle-ygef.vercel.app/r/{newSlug}</div>}
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Link to promotion</label>
+                  <select value={newSlugPromo} onChange={e => setNewSlugPromo(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #d0d0c8', borderRadius: 8, fontSize: 14, background: '#fff' }}>
+                    <option value="">Select promotion...</option>
+                    {promotions.map(p => <option key={p.id} value={p.id}>{p.promo_name} ({p.company_name})</option>)}
+                  </select>
+                </div>
+                <button onClick={saveRedirect} disabled={slugSaving || !newSlug || !newSlugPromo}
+                  style={{ width: '100%', padding: '10px', background: slugSaving ? '#9BA4B5' : '#1D9E75', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                  {slugSaving ? 'Saving...' : 'Save redirect'}
+                </button>
+              </div>
+            </div>
+            {redirects.length === 0 && <div style={{ fontSize: 13, color: '#999', textAlign: 'center', padding: '1rem' }}>No redirects set up yet</div>}
+            {redirects.map(r => {
+              const promo = promotions.find(p => p.id === r.promotion_id)
+              return (
+                <div key={r.slug} style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 10, padding: '12px 14px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>/r/{r.slug}</div>
+                    <div style={{ fontSize: 12, color: '#1D9E75' }}>{promo ? promo.promo_name : 'Unknown promotion'}</div>
+                    <div style={{ fontSize: 11, color: '#aaa', wordBreak: 'break-all' }}>receiptraffle-ygef.vercel.app/r/{r.slug}</div>
+                  </div>
+                  <button onClick={() => deleteRedirect(r.slug)} style={{ padding: '6px 12px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>Delete</button>
                 </div>
               )
             })}
@@ -379,10 +467,10 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{e.customer_name}</div>
-                    <div style={{ fontSize: 12, color: e.promotion_id ? '#1D9E75' : '#999', fontWeight: 600 }}>{promotionMap[e.promotion_id] || e.promotion_name || 'Unknown promotion'}{e.company_name ? ' · ' + e.company_name : ''}{!e.promotion_id && e.promotion_name ? ' (archived)' : ''}</div>
-                    <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone}{e.customer_email ? ` · ${e.customer_email}` : ''}</div>
-                    <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>{e.ai_result?.currency || e.currency || 'USD'} {parseInt(e.ai_result?.promoted_items_total || e.ai_result?.total_amount || e.amount || 0).toLocaleString()} · {e.ai_result?.retailer || e.retailer || 'Unknown'}</div>
-                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Ticket: {e.ticket_number} · AI: {e.ai_confidence}% · {e.created_at?.split('T')[0]}</div>
+                    <div style={{ fontSize: 12, color: e.promotion_id ? '#1D9E75' : '#999', fontWeight: 600 }}>{promotionMap[e.promotion_id] || e.promotion_name || 'Unknown promotion'}{e.company_name ? ' Â· ' + e.company_name : ''}{!e.promotion_id && e.promotion_name ? ' (archived)' : ''}</div>
+                    <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone}{e.customer_email ? ` Â· ${e.customer_email}` : ''}</div>
+                    <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>{e.ai_result?.currency || e.currency || 'USD'} {parseInt(e.ai_result?.promoted_items_total || e.ai_result?.total_amount || e.amount || 0).toLocaleString()} Â· {e.ai_result?.retailer || e.retailer || 'Unknown'}</div>
+                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Ticket: {e.ticket_number} Â· AI: {e.ai_confidence}% Â· {e.created_at?.split('T')[0]}</div>
                   </div>
                   <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600, marginLeft: 8, flexShrink: 0,
                     background: e.verification_status === 'approved' ? '#E1F5EE' : e.verification_status === 'manual_review' ? '#FFF8E6' : '#FCEBEB',
@@ -398,19 +486,19 @@ export default function AdminPage() {
         {tab === 'review' && !loading && (
           <div>
             <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Manual review queue ({pendingEntries.length})</p>
-            {pendingEntries.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#1D9E75', fontWeight: 600 }}>&#x2713; All clear  no entries need review</div>}
+            {pendingEntries.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#1D9E75', fontWeight: 600 }}>&#x2713; All clear Â no entries need review</div>}
             {pendingEntries.map(e => (
               <div key={e.id} style={{ background: '#fff', border: '1px solid #FAC775', borderRadius: 14, padding: '1.25rem', marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{e.customer_name}</div>
                     <div style={{ fontSize: 12, color: '#1D9E75', fontWeight: 600 }}>{promotionMap[e.promotion_id] || e.promotion_name || 'Unknown promotion'}</div>
-                    <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone} · {e.created_at?.split('T')[0]}</div>
+                    <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone} Â· {e.created_at?.split('T')[0]}</div>
                   </div>
                   <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#FFF8E6', color: '#633806', fontWeight: 600 }}>AI: {e.ai_confidence}%</span>
                 </div>
                 <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
-                  {e.ai_result?.currency || e.currency || 'USD'} {parseInt(e.ai_result?.promoted_items_total || e.ai_result?.total_amount || e.amount || 0).toLocaleString()} · {e.ai_result?.retailer || e.retailer || 'Unknown'} · Ticket: {e.ticket_number}
+                  {e.ai_result?.currency || e.currency || 'USD'} {parseInt(e.ai_result?.promoted_items_total || e.ai_result?.total_amount || e.amount || 0).toLocaleString()} Â· {e.ai_result?.retailer || e.retailer || 'Unknown'} Â· Ticket: {e.ticket_number}
                 </div>
                 {e.ai_result?.verification_reason && (
                   <div style={{ background: '#FFF8E6', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#633806', marginBottom: 10 }}>
@@ -438,7 +526,7 @@ export default function AdminPage() {
               return (
                 <div key={p.id} style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 10 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{p.promo_name}</div>
-                  <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>{eligible} eligible entries · Draw: {p.draw_date}</div>
+                  <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>{eligible} eligible entries Â· Draw: {p.draw_date}</div>
                   {(winners[p.id] || []).map((w, i) => (
                     <div key={i} style={{ background: '#E1F5EE', borderRadius: 10, padding: '10px 14px', marginBottom: 8 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#085041' }}>&#x1F3C6; Winner #{i+1}: {w.name}</div>
@@ -447,7 +535,7 @@ export default function AdminPage() {
                   ))}
                   <button onClick={() => runDraw(p.id, p.promo_name)} disabled={drawingId === p.id || eligible === 0}
                     style={{ width: '100%', padding: '10px', background: drawingId === p.id ? '#9BA4B5' : eligible === 0 ? '#ddd' : '#534AB7', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: drawingId === p.id || eligible === 0 ? 'not-allowed' : 'pointer' }}>
-                    {drawingId === p.id ? 'Drawing...' : eligible === 0 ? 'No eligible entries' : '🎲 Run draw'}
+                    {drawingId === p.id ? 'Drawing...' : eligible === 0 ? 'No eligible entries' : 'ð² Run draw'}
                   </button>
                 </div>
               )
@@ -503,11 +591,34 @@ export default function AdminPage() {
         </div>
       )}
 
+      {qrModal && (
+        <div onClick={() => setQrModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: '1.5rem', maxWidth: 360, width: '100%', textAlign: 'center' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{qrModal.name}</div>
+            <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Scan to enter this promotion</div>
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrModal.url)}&margin=10`}
+              alt="QR Code"
+              style={{ width: 260, height: 260, borderRadius: 8, border: '1px solid #e5e5e0', display: 'block', margin: '0 auto 16px' }}
+            />
+            <div style={{ fontSize: 11, color: '#aaa', marginBottom: 16, wordBreak: 'break-all' }}>{qrModal.url}</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <a href={`https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(qrModal.url)}&margin=20`}
+                download={`${qrModal.name}-QR.png`} target="_blank" rel="noopener noreferrer"
+                style={{ flex: 1, padding: '10px', background: '#1D9E75', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none', display: 'block' }}>
+                &#x2B07; Download QR
+              </a>
+              <button onClick={() => setQrModal(null)} style={{ flex: 1, padding: '10px', background: '#f5f5f0', color: '#333', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {receiptModal && (
         <div onClick={() => setReceiptModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: '1.25rem', maxWidth: 480, width: '100%', maxHeight: '90vh', overflow: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>Receipt  {receiptModal.name}</div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Receipt Â {receiptModal.name}</div>
               <button onClick={() => setReceiptModal(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666' }}>&times;</button>
             </div>
             <img src={receiptModal.url} alt="Receipt" style={{ width: '100%', borderRadius: 8, border: '1px solid #e5e5e0' }}
