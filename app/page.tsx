@@ -90,8 +90,10 @@ export default function Home() {
         {!loading && promotions.map((p: any) => (
           <Link key={p.id} href={`/enter/${p.id}`} style={{ textDecoration: 'none' }}>
             <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 12, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-              <div style={{ width: 50, height: 50, background: (p.color || '#1D9E75') + '18', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>
-                {p.emoji || '&#x1F381;'}
+              <div style={{ width: 50, height: 50, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: (p.color || '#1D9E75') + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {p.logo_url
+                  ? <img src={p.logo_url} alt={p.company_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span style={{ fontSize: 26 }}>{p.emoji || String.fromCodePoint(0x1F381)}</span>}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2, color: '#1a1a18' }}>{p.promo_name}</div>
