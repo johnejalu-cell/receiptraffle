@@ -102,6 +102,25 @@ export default function AdminPage() {
     setFeeSaving(false)
   }
 
+  async function deletePromotion(id: string, name: string) {
+    if (!confirm(`Delete "${name}"? This cannot be undone. Entries for this promotion will remain.`)) return
+    try {
+      const res = await fetch('/api/admin/promotions', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setPromotions(prev => prev.filter(p => p.id !== id))
+      } else {
+        alert('Failed to delete: ' + (data.error || 'Unknown error'))
+      }
+    } catch (e) {
+      alert('Error deleting promotion')
+    }
+  }
+
   async function runDraw(promoId: string, promoName: string) {
     setDrawingId(promoId)
     await new Promise(r => setTimeout(r, 2000))
@@ -316,11 +335,12 @@ export default function AdminPage() {
                       <div style={{ fontSize: 18, fontWeight: 700, color: '#854F0B' }}>{pending}</div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                     <button onClick={() => exportCSV(p.id)} style={{ flex: 1, padding: '8px', background: '#EEEDFE', color: '#3C3489', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>CSV</button>
                     <button onClick={() => printEntries(p)} style={{ flex: 1, padding: '8px', background: '#E6F1FB', color: '#0C447C', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Print</button>
                     <button onClick={() => { setPromoFilter(p.id); setTab('entries') }} style={{ flex: 1, padding: '8px', background: '#f5f5f0', color: '#1a1a18', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View entries</button>
                   </div>
+                  <button onClick={() => deletePromotion(p.id, p.promo_name)} style={{ width: '100%', padding: '8px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Delete promotion</button>
                 </div>
               )
             })}
