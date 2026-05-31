@@ -1,4 +1,4 @@
-'use client'
+A'use client'
 import { useState, useEffect } from 'react'
 
 export default function AdminPage() {
@@ -232,7 +232,7 @@ export default function AdminPage() {
   if (!authed) return (
     <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafaf9', padding: '1rem' }}>
       <div style={{ width: '100%', maxWidth: 340, background: '#fff', border: '1px solid #e5e5e0', borderRadius: 16, padding: '2rem', textAlign: 'center' }}>
-        <div style={{ fontSize: 36, marginBottom: 12 }}>🔐</div>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>{String.fromCodePoint(0x1f510)}</div>
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Admin access</h1>
         <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Enter your admin PIN</p>
         {pinError && <div style={{ background: '#FCEBEB', color: '#791F1F', padding: '8px 12px', borderRadius: 8, fontSize: 13, marginBottom: 14 }}>{pinError}</div>}
@@ -248,7 +248,7 @@ export default function AdminPage() {
     <main style={{ minHeight: '100vh', background: '#fafaf9' }}>
       <div style={{ background: '#1a1a2e', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ fontSize: 22 }}>🧾</div>
+          <div style={{ fontSize: 22 }}>{String.fromCodePoint(0x1f9fe)}</div>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>ReceiptRaffle Admin</div>
             <div style={{ fontSize: 11, color: '#9BA4B5' }}>Live data</div>
@@ -303,7 +303,7 @@ export default function AdminPage() {
             )}
             {pendingSubmissions.length > 0 && (
               <div style={{ background: '#E6F1FB', border: '1px solid #93C5FD', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#0C447C' }}>
-                📋 <strong>{pendingSubmissions.length} promotion submissions</strong> awaiting approval.
+                String.fromCodePoint(0x1f4cb) <strong>{pendingSubmissions.length} promotion submissions</strong> awaiting approval.
                 <button onClick={() => setTab('submissions')} style={{ background: 'none', border: 'none', color: '#0C447C', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, marginLeft: 4 }}>View</button>
               </div>
             )}
@@ -392,7 +392,7 @@ export default function AdminPage() {
                     <button onClick={() => { setPromoFilter(p.id); setTab('entries') }} style={{ flex: 1, padding: '8px', background: '#f5f5f0', color: '#1a1a18', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View entries</button>
                   </div>
                   <button onClick={() => deletePromotion(p.id, p.promo_name)} style={{ width: '100%', padding: '8px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>Delete promotion</button>
-                  <button onClick={() => setQrModal({ url: `https://receiptraffle-ygef.vercel.app/enter/${p.id}`, name: p.promo_name })} style={{ width: '100%', padding: '8px', background: '#E8F8F2', color: '#085041', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>📱 QR code</button>
+                  <button onClick={() => setQrModal({ url: `https://receiptraffle-ygef.vercel.app/enter/${p.id}`, name: p.promo_name })} style={{ width: '100%', padding: '8px', background: '#E8F8F2', color: '#085041', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>String.fromCodePoint(0x1f4f1) QR code</button>
                 </div>
               )
             })}
@@ -506,7 +506,7 @@ export default function AdminPage() {
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  <button onClick={() => viewReceipt(e)} style={{ flex: 1, padding: '8px', background: '#f5f5f0', color: '#333', border: '1px solid #d0d0c8', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>🖼 View receipt</button>
+                  <button onClick={() => viewReceipt(e)} style={{ flex: 1, padding: '8px', background: '#f5f5f0', color: '#333', border: '1px solid #d0d0c8', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>String.fromCodePoint(0x1f5bc) View receipt</button>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => updateEntry(e.id, 'approved')} style={{ flex: 1, padding: '8px', background: '#E1F5EE', color: '#085041', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>✓ Approve</button>
@@ -529,7 +529,7 @@ export default function AdminPage() {
                   <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>{eligible} eligible entries · Draw: {p.draw_date}</div>
                   {(winners[p.id] || []).map((w, i) => (
                     <div key={i} style={{ background: '#E1F5EE', borderRadius: 10, padding: '10px 14px', marginBottom: 8 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#085041' }}>🏆 Winner #{i+1}: {w.name}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#085041' }}>String.fromCodePoint(0x1f3c6) Winner #{i+1}: {w.name}</div>
                       <div style={{ fontSize: 11, color: '#0F6E56' }}>{w.time}</div>
                     </div>
                   ))}
