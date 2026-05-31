@@ -236,7 +236,7 @@ export default function AdminPage() {
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Admin access</h1>
         <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Enter your admin PIN</p>
         {pinError && <div style={{ background: '#FCEBEB', color: '#791F1F', padding: '8px 12px', borderRadius: 8, fontSize: 13, marginBottom: 14 }}>{pinError}</div>}
-        <input type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="ÂÂÂÂ" maxLength={6}
+        <input type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="••••" maxLength={6}
           onKeyDown={e => e.key === 'Enter' && checkPin()}
           style={{ width: '100%', padding: '12px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 22, textAlign: 'center', letterSpacing: 8, marginBottom: 12, background: '#f5f5f0' }} />
         <button onClick={checkPin} style={{ width: '100%', padding: '12px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Enter</button>
@@ -319,7 +319,7 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{s.promo_name}</div>
-                    <div style={{ fontSize: 12, color: '#888' }}>{s.company_name} Â· Ref: {s.ref}</div>
+                    <div style={{ fontSize: 12, color: '#888' }}>{s.company_name} · Ref: {s.ref}</div>
                   </div>
                   <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600,
                     background: s.status === 'active' ? '#E1F5EE' : s.status === 'declined' ? '#FCEBEB' : '#FFF8E6',
@@ -336,7 +336,7 @@ export default function AdminPage() {
                   <div>Submitted: <strong>{s.created_at?.split('T')[0]}</strong></div>
                 </div>
                 <div style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>
-                  Prizes: {Array.isArray(s.prizes) ? s.prizes.join(' Â· ') : s.prizes}
+                  Prizes: {Array.isArray(s.prizes) ? s.prizes.join(' · ') : s.prizes}
                 </div>
                 {s.status === 'pending' && (
                   <>
@@ -368,7 +368,7 @@ export default function AdminPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 700 }}>{p.promo_name}</div>
-                      <div style={{ fontSize: 12, color: '#888' }}>{p.company_name} Â· Draw: {p.draw_date}</div>
+                      <div style={{ fontSize: 12, color: '#888' }}>{p.company_name} · Draw: {p.draw_date}</div>
                     </div>
                     <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#E1F5EE', color: '#085041', fontWeight: 600 }}>Active</span>
                   </div>
@@ -467,10 +467,10 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{e.customer_name}</div>
-                    <div style={{ fontSize: 12, color: e.promotion_id ? '#1D9E75' : '#999', fontWeight: 600 }}>{promotionMap[e.promotion_id] || e.promotion_name || 'Unknown promotion'}{e.company_name ? ' Â· ' + e.company_name : ''}{!e.promotion_id && e.promotion_name ? ' (archived)' : ''}</div>
-                    <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone}{e.customer_email ? ` Â· ${e.customer_email}` : ''}</div>
-                    <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>{e.ai_result?.currency || e.currency || 'USD'} {parseInt(e.ai_result?.promoted_items_total || e.ai_result?.total_amount || e.amount || 0).toLocaleString()} Â· {e.ai_result?.retailer || e.retailer || 'Unknown'}</div>
-                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Ticket: {e.ticket_number} Â· AI: {e.ai_confidence}% Â· {e.created_at?.split('T')[0]}</div>
+                    <div style={{ fontSize: 12, color: e.promotion_id ? '#1D9E75' : '#999', fontWeight: 600 }}>{promotionMap[e.promotion_id] || e.promotion_name || 'Unknown promotion'}{e.company_name ? ' · ' + e.company_name : ''}{!e.promotion_id && e.promotion_name ? ' (archived)' : ''}</div>
+                    <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone}{e.customer_email ? ` · ${e.customer_email}` : ''}</div>
+                    <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>{e.ai_result?.currency || e.currency || 'USD'} {parseInt(e.ai_result?.promoted_items_total || e.ai_result?.total_amount || e.amount || 0).toLocaleString()} · {e.ai_result?.retailer || e.retailer || 'Unknown'}</div>
+                    <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Ticket: {e.ticket_number} · AI: {e.ai_confidence}% · {e.created_at?.split('T')[0]}</div>
                   </div>
                   <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600, marginLeft: 8, flexShrink: 0,
                     background: e.verification_status === 'approved' ? '#E1F5EE' : e.verification_status === 'manual_review' ? '#FFF8E6' : '#FCEBEB',
@@ -486,19 +486,19 @@ export default function AdminPage() {
         {tab === 'review' && !loading && (
           <div>
             <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Manual review queue ({pendingEntries.length})</p>
-            {pendingEntries.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#1D9E75', fontWeight: 600 }}>✓ All clear Â no entries need review</div>}
+            {pendingEntries.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#1D9E75', fontWeight: 600 }}>✓ All clear — no entries need review</div>}
             {pendingEntries.map(e => (
               <div key={e.id} style={{ background: '#fff', border: '1px solid #FAC775', borderRadius: 14, padding: '1.25rem', marginBottom: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{e.customer_name}</div>
                     <div style={{ fontSize: 12, color: '#1D9E75', fontWeight: 600 }}>{promotionMap[e.promotion_id] || e.promotion_name || 'Unknown promotion'}</div>
-                    <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone} Â· {e.created_at?.split('T')[0]}</div>
+                    <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone} · {e.created_at?.split('T')[0]}</div>
                   </div>
                   <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#FFF8E6', color: '#633806', fontWeight: 600 }}>AI: {e.ai_confidence}%</span>
                 </div>
                 <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
-                  {e.ai_result?.currency || e.currency || 'USD'} {parseInt(e.ai_result?.promoted_items_total || e.ai_result?.total_amount || e.amount || 0).toLocaleString()} Â· {e.ai_result?.retailer || e.retailer || 'Unknown'} Â· Ticket: {e.ticket_number}
+                  {e.ai_result?.currency || e.currency || 'USD'} {parseInt(e.ai_result?.promoted_items_total || e.ai_result?.total_amount || e.amount || 0).toLocaleString()} · {e.ai_result?.retailer || e.retailer || 'Unknown'} · Ticket: {e.ticket_number}
                 </div>
                 {e.ai_result?.verification_reason && (
                   <div style={{ background: '#FFF8E6', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#633806', marginBottom: 10 }}>
@@ -526,7 +526,7 @@ export default function AdminPage() {
               return (
                 <div key={p.id} style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 10 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{p.promo_name}</div>
-                  <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>{eligible} eligible entries Â· Draw: {p.draw_date}</div>
+                  <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>{eligible} eligible entries · Draw: {p.draw_date}</div>
                   {(winners[p.id] || []).map((w, i) => (
                     <div key={i} style={{ background: '#E1F5EE', borderRadius: 10, padding: '10px 14px', marginBottom: 8 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#085041' }}>🏆 Winner #{i+1}: {w.name}</div>
@@ -618,7 +618,7 @@ export default function AdminPage() {
         <div onClick={() => setReceiptModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: '1.25rem', maxWidth: 480, width: '100%', maxHeight: '90vh', overflow: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>Receipt Â {receiptModal.name}</div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Receipt — {receiptModal.name}</div>
               <button onClick={() => setReceiptModal(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666' }}>×</button>
             </div>
             <img src={receiptModal.url} alt="Receipt" style={{ width: '100%', borderRadius: 8, border: '1px solid #e5e5e0' }}
