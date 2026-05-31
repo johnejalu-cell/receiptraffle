@@ -13,6 +13,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
   const [email, setEmail] = useState('')
   const [result, setResult] = useState<any>(null)
   const [ticket, setTicket] = useState('')
+  const [termsModal, setTermsModal] = useState(false)
 
   useEffect(() => {
     fetch('/api/promotions')
@@ -30,6 +31,8 @@ export default function EnterPage({ params }: { params: { id: string } }) {
             color: found.color || '#1D9E75',
             dbId: found.id,
             productKeywords: found.product_keywords || [],
+            logoUrl: found.logo_url || null,
+            termsConditions: found.terms_conditions || null,
           })
         }
         setPromoLoaded(true)
@@ -181,7 +184,11 @@ export default function EnterPage({ params }: { params: { id: string } }) {
       <div style={{ padding: '1.5rem 1rem', maxWidth: 480, margin: '0 auto' }}>
         <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 12, padding: '1rem', marginBottom: 20 }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: promo.productKeywords?.length > 0 ? 10 : 0 }}>
-            <div style={{ fontSize: 28 }}>{promo.icon}</div>
+            {promo.logoUrl ? (
+              <img src={promo.logoUrl} alt={promo.brand} style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 10, border: '1px solid #e5e5e0' }} />
+            ) : (
+              <div style={{ fontSize: 28 }}>{promo.icon}</div>
+            )}
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: promo.color }}>Prize: {promo.prize}</div>
               <div style={{ fontSize: 12, color: '#888' }}>Min spend: {promo.currency} {parseInt(promo.minSpend).toLocaleString()} on promoted products</div>
@@ -191,6 +198,11 @@ export default function EnterPage({ params }: { params: { id: string } }) {
             <div style={{ background: '#f5f5f0', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#666' }}>
               <strong>Promoted products:</strong> {promo.productKeywords.join(', ')}
             </div>
+          )}
+          {promo.termsConditions && (
+            <button onClick={() => setTermsModal(true)} style={{ background: 'none', border: 'none', color: '#1D9E75', fontSize: 12, cursor: 'pointer', padding: '4px 0', textDecoration: 'underline' }}>
+              View Terms & Conditions
+            </button>
           )}
         </div>
 
@@ -279,6 +291,17 @@ export default function EnterPage({ params }: { params: { id: string } }) {
           </div>
         )}
       </div>
+      {termsModal && promo?.termsConditions && (
+        <div onClick={() => setTermsModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '16px 16px 0 0', padding: '1.5rem', width: '100%', maxWidth: 520, maxHeight: '80vh', overflow: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>Terms & Conditions</div>
+              <button onClick={() => setTermsModal(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#666' }}>x</button>
+            </div>
+            <div style={{ fontSize: 12, color: '#444', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>{promo.termsConditions}</div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
