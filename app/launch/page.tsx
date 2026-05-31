@@ -2,39 +2,41 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
-const DEFAULT_TCS = `TERMS AND CONDITIONS
-
-1. PROMOTER
-[Company Name], [Registered Address], [Company Number].
-
-2. PROMOTION PERIOD
-This promotion runs from [Start Date] to [End Date]. The prize draw will take place on [Draw Date].
-
-3. ELIGIBILITY
-Open to residents of [Country/Region] aged 18 or over, except employees of the Promoter and their immediate families.
-
-4. HOW TO ENTER
-Purchase [Product Name] with a minimum spend of [Minimum Amount] during the promotion period. Upload your receipt at [URL] and complete the entry form. One entry per receipt. Maximum [X] entries per person.
-
-5. THE PRIZE
-[Describe prize(s) in full]. The prize is non-transferable and no cash alternative will be offered.
-
-6. WINNER SELECTION
-Winners will be selected by random draw from all valid entries on [Draw Date]. The Promoter's decision is final.
-
-7. WINNER NOTIFICATION
-Winners will be contacted by phone or email within 14 days of the draw. If a winner cannot be contacted within 28 days, the Promoter reserves the right to select an alternative winner.
-
-8. PRIZE CLAIM
-The prize must be claimed within [X] days of notification. Failure to claim within this period may result in forfeiture.
-
-9. DATA PROTECTION
-Personal data collected will be used solely to administer this promotion and will not be shared with third parties except as required by law. Data will be deleted within 6 months of the promotion end date.
-
-10. GENERAL
-This promotion is subject to [Country] law. The Promoter reserves the right to amend or withdraw the promotion at any time. By entering, participants agree to these terms and conditions.
-
-Prepared in accordance with the CAP Code (UK Code of Non-broadcast Advertising and Sales Promotion) and the ASA guidelines on sales promotions.`
+const DEFAULT_TCS = [
+  'TERMS AND CONDITIONS',
+  '',
+  '1. PROMOTER',
+  '[Company Name], [Registered Address], [Company Number].',
+  '',
+  '2. PROMOTION PERIOD',
+  'This promotion runs from [Start Date] to [End Date]. The prize draw will take place on [Draw Date].',
+  '',
+  '3. ELIGIBILITY',
+  'Open to residents of [Country/Region] aged 18 or over, except employees of the Promoter and their immediate families.',
+  '',
+  '4. HOW TO ENTER',
+  'Purchase [Product Name] with a minimum spend of [Minimum Amount] during the promotion period. Upload your receipt at [URL] and complete the entry form. One entry per receipt. Maximum [X] entries per person.',
+  '',
+  '5. THE PRIZE',
+  '[Describe prize(s) in full]. The prize is non-transferable and no cash alternative will be offered.',
+  '',
+  '6. WINNER SELECTION',
+  'Winners will be selected by random draw from all valid entries on [Draw Date]. The Promoters decision is final.',
+  '',
+  '7. WINNER NOTIFICATION',
+  'Winners will be contacted by phone or email within 14 days of the draw. If a winner cannot be contacted within 28 days, the Promoter reserves the right to select an alternative winner.',
+  '',
+  '8. PRIZE CLAIM',
+  'The prize must be claimed within [X] days of notification. Failure to claim within this period may result in forfeiture.',
+  '',
+  '9. DATA PROTECTION',
+  'Personal data collected will be used solely to administer this promotion and will not be shared with third parties except as required by law. Data will be deleted within 6 months of the promotion end date.',
+  '',
+  '10. GENERAL',
+  'This promotion is subject to [Country] law. The Promoter reserves the right to amend or withdraw the promotion at any time. By entering, participants agree to these terms and conditions.',
+  '',
+  'Prepared in accordance with the CAP Code (UK Code of Non-broadcast Advertising and Sales Promotion) and the ASA guidelines on sales promotions.',
+].join('\n')
 
 export default function LaunchPage() {
   const [step, setStep] = useState(1)
