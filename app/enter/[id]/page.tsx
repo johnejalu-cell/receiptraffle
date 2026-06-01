@@ -33,6 +33,8 @@ export default function EnterPage({ params }: { params: { id: string } }) {
             productKeywords: found.product_keywords || [],
             logoUrl: found.logo_url || null,
             termsConditions: found.terms_conditions || null,
+            prizes: Array.isArray(found.prizes) ? found.prizes : (found.prizes ? [found.prizes] : []),
+            drawDate: found.draw_date || '',
           })
         }
         setPromoLoaded(true)
@@ -183,15 +185,29 @@ export default function EnterPage({ params }: { params: { id: string } }) {
 
       <div style={{ padding: '1.5rem 1rem', maxWidth: 480, margin: '0 auto' }}>
         <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 12, padding: '1rem', marginBottom: 20 }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: promo.productKeywords?.length > 0 ? 10 : 0 }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 10 }}>
             {promo.logoUrl ? (
-              <img src={promo.logoUrl} alt={promo.brand} style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 10, border: '1px solid #e5e5e0' }} />
+              <img src={promo.logoUrl} alt={promo.brand} style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 10, border: '1px solid #e5e5e0', flexShrink: 0 }} />
             ) : (
-              <div style={{ fontSize: 28 }}>{promo.icon}</div>
+              <div style={{ fontSize: 28, flexShrink: 0 }}>{promo.icon}</div>
             )}
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: promo.color }}>Prize: {promo.prize}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a18', marginBottom: 2 }}>{promo.title}</div>
+              <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>by {promo.brand}</div>
+              {promo.prizes && promo.prizes.length > 0 ? (
+                <div style={{ marginBottom: 8 }}>
+                  {(promo.prizes as string[]).slice(0, 3).map((p: string, i: number) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <div style={{ width: 20, height: 20, background: i === 0 ? '#DAA520' : i === 1 ? '#A8A8A8' : '#CD7F32', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{i + 1}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: promo.color || '#1D9E75' }}>WIN: {p}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, fontWeight: 600, color: promo.color || '#1D9E75', marginBottom: 8 }}>WIN: {promo.prize}</div>
+              )}
               <div style={{ fontSize: 12, color: '#888' }}>Min spend: {promo.currency} {parseInt(promo.minSpend).toLocaleString()} on promoted products</div>
+              {promo.drawDate && <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Draw date: {promo.drawDate}</div>}
             </div>
           </div>
           {promo.productKeywords?.length > 0 && (
