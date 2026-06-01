@@ -90,13 +90,19 @@ export default function LaunchPage() {
       const res = await fetch('/api/upload-logo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base64, mediaType: logoFile.type, fileName: logoFile.name })
+        body: JSON.stringify({ base64, mediaType: logoFile.type || 'image/jpeg', fileName: logoFile.name })
       })
       const data = await res.json()
       setLogoUploading(false)
+      if (data.error) {
+        console.error('Logo upload error:', data.error)
+        setError('Logo upload failed: ' + data.error + ' — continuing without logo')
+        return ''
+      }
       return data.url || ''
-    } catch (e) {
+    } catch (e: any) {
       setLogoUploading(false)
+      console.error('Logo upload exception:', e.message)
       return ''
     }
   }
