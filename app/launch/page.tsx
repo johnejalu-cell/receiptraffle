@@ -52,7 +52,7 @@ export default function LaunchPage() {
 
   const [form, setForm] = useState({
     companyName: '', contactName: '', email: '', phone: '',
-    promoName: '', description: '', minSpend: '', maxEntries: '3',
+    promoName: '', description: '', minSpend: '', currency: 'USD', maxEntries: '3',
     startDate: '', endDate: '', drawDate: '',
     prizes: [''],
     productKeywords: [''],
@@ -127,6 +127,7 @@ export default function LaunchPage() {
           promoName: form.promoName,
           description: form.description,
           minSpend: form.minSpend,
+          currency: form.currency,
           maxEntries: form.maxEntries,
           startDate: form.startDate,
           endDate: form.endDate,
@@ -247,7 +248,26 @@ export default function LaunchPage() {
                 </div>
                 <button onClick={addKeyword} style={{ width: '100%', padding: '10px', background: '#fff', border: '1.5px dashed #d0d0c8', borderRadius: 10, fontSize: 14, color: '#666', cursor: 'pointer' }}>+ Add another product</button>
               </div>
-              <div><label style={labelStyle}>Minimum spend on promoted products *</label><input style={inputStyle} type="number" value={form.minSpend} onChange={e => set('minSpend', e.target.value)} placeholder="e.g. 50" /></div>
+              <div>
+                <label style={labelStyle}>Minimum spend on promoted products *</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <select value={form.currency} onChange={e => set('currency', e.target.value)}
+                    style={{ padding: '12px 10px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff', flexShrink: 0 }}>
+                    <option value="USD">USD</option>
+                    <option value="GBP">GBP</option>
+                    <option value="EUR">EUR</option>
+                    <option value="UGX">UGX</option>
+                    <option value="KES">KES</option>
+                    <option value="NGN">NGN</option>
+                    <option value="ZAR">ZAR</option>
+                    <option value="GHS">GHS</option>
+                    <option value="TZS">TZS</option>
+                    <option value="AUD">AUD</option>
+                    <option value="CAD">CAD</option>
+                  </select>
+                  <input style={{ ...inputStyle, flex: 1 }} type="number" value={form.minSpend} onChange={e => set('minSpend', e.target.value)} placeholder="e.g. 50" />
+                </div>
+              </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <div style={{ flex: 1 }}><label style={labelStyle}>Start date *</label><input style={inputStyle} type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)} /></div>
                 <div style={{ flex: 1 }}><label style={labelStyle}>End date *</label><input style={inputStyle} type="date" value={form.endDate} onChange={e => set('endDate', e.target.value)} /></div>
@@ -320,7 +340,7 @@ export default function LaunchPage() {
               {[
                 ['Company', form.companyName],
                 ['Promotion', form.promoName],
-                ['Min spend', form.minSpend ? `${form.minSpend}` : '—'],
+                ['Min spend', form.minSpend ? `${form.currency} ${form.minSpend}` : '—'],
                 ['Promoted products', form.productKeywords.filter(Boolean).join(', ')],
                 ['Draw date', form.drawDate],
                 ['Prizes', `${form.prizes.filter(Boolean).length} prize(s)`],
