@@ -13,14 +13,13 @@ function normaliseMediaType(raw: string): 'image/jpeg' | 'image/png' | 'image/gi
 
 function fuzzyMatch(item: string, keyword: string): boolean {
   const itemLower = item.toLowerCase().replace(/[^a-z0-9\s]/g, '')
-  const keyWords = keyword.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(Boolean)
-  const checkWords = keyWords.slice(0, 3)
-  return checkWords.every(w => itemLower.includes(w))
+  const keyWords = keyword.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(Boolean).slice(0, 3)
+  return keyWords.every(w => itemLower.includes(w))
 }
 
-function buildPrompt(keywords: string[], barcodes: string[], minSpend: any, currency: string): string {
+function buildPrompt(keywords: string[], barcodes: string[], minSpend: number, currency: string): string {
   const barcodeNote = barcodes.length > 0
-    ? '\nBARCODE CHECK: Also look for these product barcodes on the receipt: ' + barcodes.join(', ') + '. If found, set barcode_found to true.'
+    ? '\nBARCODE CHECK: Also look for these product barcodes on the receipt: ' + barcodes.join(', ')
     : ''
 
   if (keywords.length > 0) {
@@ -39,46 +38,54 @@ function buildPrompt(keywords: string[], barcodes: string[], minSpend: any, curr
       + '  "retailer": "exact store name from receipt",\n'
       + '  "date": "date shown on receipt",\n'
       + '  "total_amount": total of entire receipt as a plain number,\n'
-      + '  "promoted_items_found": ["exact names of matching items found"],\n'
-      + '  "promoted_items_total": total of matching items only as a plain number,\n'
-      + '  "currency": "3-letter currency code detected from receipt",\n'
-      + '  "verification_status": "approved or manual_review",\n'
-      + '  "verification_reason": "one sentence explaining your decision",\n'
-      + '  "confidence": plain number 0-100 indicating how clearly you can read the receipt,\n'
-      + '  "barcode_found": true or false\n'
-      + '}\n\n'
-      + 'Set verification_status to "approved" if you found items matching the brand (even partially) AND their total >= ' + (minSpend || 0) + '.\n'
-      + 'If a registered barcode is found on the receipt, that is strong evidence of purchase.\n'
-      + 'Set to "manual_review" only if receipt is genuinely unreadable, brand is genuinely absent, or total clearly falls short.'
+      + '  "currency": "currency code from receipt",\n'
+      + '  "promoted_items_found": ["item1", "item2"],\n'
+      + '  "promoted_items_total": total of matching items as a plain number,\n'
+      + '  "barcode_found": true or false,\n'
+      + '  "confidence": number 0-100,\n'
+      + '  "verification_status": "approved" or "manual_review",\n'
+      + '  "verification_reason": "brief explanation"\n'
+      + '}'
   }
 
-  return 'You are verifying a receipt for a sales promotion. Examine this receipt carefully.\n\n'
-    + 'TASK: Read the total amount and store name.\n'
+  return 'You are verifying a receipt for a sales promotion. Extract the following information.\n\n'
     + '- Report the store/retailer name exactly as shown\n'
-    + '- Report the currency shown on the receipt (e.g. USD, GBP, EUR, UGX, KES, etc.)\n'
-    + '- Report the total amount paid'
+    + '- Report the currency shown on the receipt\n'
+    + '- Report the total amount\n'
+    + '- Minimum spend required: ' + minSpend + ' ' + currency
     + barcodeNote + '\n\n'
     + 'Reply with JSON only, no markdown:\n'
     + '{\n'
     + '  "retailer": "exact store name from receipt",\n'
     + '  "date": "date shown on receipt",\n'
-    + '  "total_amount": total amount as a plain number,\n'
+    + '  "total_amount": total as a plain number,\n'
+    + '  "currency": "currency code from receipt",\n'
     + '  "promoted_items_found": [],\n'
     + '  "promoted_items_total": 0,\n'
-    + '  "currency": "3-letter currency code detected from receipt",\n'
-    + '  "verification_status": "approved or manual_review",\n'
-    + '  "verification_reason": "one sentence explaining your decision",\n'
-    + '  "confidence": plain number 0-100 indicating how clearly you can read the receipt,\n'
-    + '  "barcode_found": true or false\n'
-    + '}\n\n'
-    + 'Set verification_status to "approved" if total_amount >= ' + (minSpend || 0) + ' and receipt is legible.\n'
-    + 'Set to "manual_review" only if receipt is genuinely unreadable or total clearly falls short.'
+    + '  "barcode_found": false,\n'
+    + '  "confidence": number 0-100,\n'
+    + '  "verification_status": "approved" or "manual_review",\n'
+    + '  "verification_reason": "brief explanation"\n'
+    + '}'
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { imageBase64, mediaType, minSpend, currency, promotionId, name, phone, email, productKeywords, productBarcodes } = body
+    const {
+      imageBase64,
+      mediaType,
+      minSpend,
+      currency,
+      promotionId,
+      name,
+      phone,
+      email,
+      productKeywords,
+      productBarcodes,
+      promotionName,
+      companyName,
+    } = body
 
     console.warn('[entries] Request received:', {
       hasImage: !!imageBase64,
@@ -101,7 +108,18 @@ export async function POST(req: NextRequest) {
     const keywords: string[] = Array.isArray(productKeywords) && productKeywords.length > 0 ? productKeywords : []
     const barcodes: string[] = Array.isArray(productBarcodes) && productBarcodes.length > 0 ? productBarcodes : []
 
-    let aiResult: any = {
+    let aiResult: {
+      verification_status: string
+      total_amount: number
+      promoted_items_total: number
+      promoted_items_found: string[]
+      confidence: number
+      verification_reason: string
+      retailer: string
+      currency: string
+      date: string
+      barcode_found: boolean
+    } = {
       verification_status: 'manual_review',
       total_amount: 0,
       promoted_items_total: 0,
@@ -115,12 +133,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (!anthropicKey) {
-      console.warn('[entries] No Anthropic key — skipping AI')
+      console.warn('[entries] No Anthropic key - skipping AI')
     } else {
       try {
         console.warn('[entries] Calling Anthropic API...')
         const anthropic = new Anthropic({ apiKey: anthropicKey })
-        const prompt = buildPrompt(keywords, barcodes, minSpend, currency || 'USD')
+        const prompt = buildPrompt(keywords, barcodes, minSpend || 0, currency || 'USD')
 
         const response = await anthropic.messages.create({
           model: 'claude-sonnet-4-6',
@@ -134,7 +152,7 @@ export async function POST(req: NextRequest) {
           }]
         })
 
-        const rawText = response.content.map((c: any) => c.text || '').join('')
+        const rawText = response.content.map((c: { type: string; text?: string }) => c.type === 'text' ? (c.text || '') : '').join('')
         console.warn('[entries] AI raw response:', rawText.substring(0, 300))
 
         const firstBrace = rawText.indexOf('{')
@@ -169,17 +187,13 @@ export async function POST(req: NextRequest) {
           let reason = parsed.verification_reason || 'Sent for manual review'
           if (!isReadable) reason = 'Receipt not clearly readable (confidence: ' + parsed.confidence + '%)'
           else if (!hasItems) reason = 'Brand/product "' + keywords.join(', ') + '" not found on receipt'
-          else if (!meetsMinimum) reason = 'Amount ' + (parsed.currency || currency || 'USD') + ' ' + amountToCheck.toLocaleString() + ' is below the minimum of ' + (minSpend || 0)
+          else if (!meetsMinimum) reason = 'Amount ' + (parsed.currency || currency || 'USD') + ' ' + amountToCheck.toLocaleString() + ' is below minimum ' + (minSpend || 0).toLocaleString()
           aiResult = { ...parsed, promoted_items_found: matchedItems, verification_status: 'manual_review', verification_reason: reason }
         }
-
-      } catch (aiError: any) {
-        console.error('[entries] AI ERROR:', aiError.message)
-        aiResult.verification_reason = 'AI error: ' + aiError.message
+      } catch (aiError: unknown) {
+        console.error('[entries] AI error:', aiError instanceof Error ? aiError.message : String(aiError))
       }
     }
-
-    console.warn('[entries] Final status:', aiResult.verification_status, '| confidence:', aiResult.confidence)
 
     const isApproved = aiResult.verification_status === 'approved'
 
@@ -200,6 +214,8 @@ export async function POST(req: NextRequest) {
         ai_confidence: aiResult.confidence || 0,
         ai_result: { ...aiResult, barcode_found: aiResult.barcode_found || false },
         receipt_image_path: null,
+        promotion_name: promotionName || null,
+        company_name: companyName || null,
       })
       if (dbError) {
         console.error('[entries] DB ERROR:', dbError.message)
@@ -214,8 +230,8 @@ export async function POST(req: NextRequest) {
       ticketNumber: ticket,
     })
 
-  } catch (error: any) {
-    console.error('[entries] FATAL ERROR:', error.message)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error: unknown) {
+    console.error('[entries] FATAL ERROR:', error instanceof Error ? error.message : String(error))
+    return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 })
   }
 }
