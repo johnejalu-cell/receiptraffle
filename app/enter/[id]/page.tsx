@@ -35,6 +35,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
             termsConditions: found.terms_conditions || null,
             prizes: Array.isArray(found.prizes) ? found.prizes : (found.prizes ? [found.prizes] : []),
             drawDate: found.draw_date || '',
+            productBarcodes: Array.isArray(found.product_barcodes) ? found.product_barcodes : [],
           })
         }
         setPromoLoaded(true)
@@ -93,6 +94,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
           currency: promo.currency,
           promotionId: promo.dbId || null,
           productKeywords: promo.productKeywords || [],
+          productBarcodes: promo.productBarcodes || [],
           name,
           phone,
           email,
