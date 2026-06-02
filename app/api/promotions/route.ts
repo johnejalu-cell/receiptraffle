@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
         entries_count: 0,
         logo_url: body.logoUrl || null,
         terms_conditions: body.termsConditions || null,
+        promoter_pin: body.pin || null,
       })
       .select()
       .single()
