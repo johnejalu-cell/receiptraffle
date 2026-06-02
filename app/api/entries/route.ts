@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
         const keywordList = keywords.join('", "')
         const barcodeInstruction = barcodes.length > 0
-          ? `\nBARCODE CHECK: Also look for these product barcodes on the receipt: ${barcodes.join(', ')}. Receipts sometimes print barcodes or product codes next to line items. If you find a matching barcode, set barcode_found to true and note which one.`
+          ? '\nBARCODE CHECK: Also look for these product barcodes on the receipt: ' + barcodes.join(', ') + '. If you find a matching barcode, set barcode_found to true.'
           : ''
 
         const prompt = keywords.length > 0
@@ -92,7 +92,7 @@ TASK: Find items matching this brand/product: "${keywordList}"
 - The brand name may be abbreviated or partially visible, be generous in matching
 - Report the store/retailer name exactly as shown
 - Report the currency shown on the receipt (e.g. USD, GBP, EUR, UGX, KES, etc.)
-- Add up the total spent on matching items only${barcodeInstruction}`
+- Add up the total spent on matching items only
 
 Reply with JSON only, no markdown:
 {
@@ -109,7 +109,7 @@ Reply with JSON only, no markdown:
 }
 
 Set verification_status to "approved" if you found items matching the brand (even partially) AND their total >= ${minSpend || 0}.
-If a registered barcode is found, that is strong evidence of purchase — factor it positively.
+If a registered barcode is found on the receipt, that is strong evidence of purchase.
 Set to "manual_review" only if receipt is genuinely unreadable, brand is genuinely absent, or total clearly falls short.`
 
           : `You are verifying a receipt for a sales promotion. Examine this receipt carefully.
