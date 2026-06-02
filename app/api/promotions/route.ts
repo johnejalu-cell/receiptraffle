@@ -9,7 +9,6 @@ export async function GET() {
     const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(SUPABASE_URL, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 
-    // Fetch active promotions
     const { data, error } = await supabase
       .from('promotion_submissions')
       .select('*')
@@ -19,7 +18,6 @@ export async function GET() {
     if (error) return NextResponse.json({ error: error.message, promotions: [] })
     if (!data || data.length === 0) return NextResponse.json({ promotions: [] })
 
-    // Count approved entries per promotion from customer_entries
     const ids = data.map((p: any) => p.id)
     const { data: entryCounts } = await supabase
       .from('customer_entries')
@@ -27,7 +25,6 @@ export async function GET() {
       .in('promotion_id', ids)
       .eq('verification_status', 'approved')
 
-    // Build a count map
     const countMap: Record<string, number> = {}
     if (entryCounts) {
       entryCounts.forEach((e: any) => {
@@ -35,61 +32,112 @@ export async function GET() {
       })
     }
 
-    // Attach live entry counts to each promotion
     const promotions = data.map((p: any) => ({
       ...p,
       entries_count: countMap[p.id] || 0,
     }))
 
     return NextResponse.json({ promotions })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message, promotions: [] })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err), promotions: [] })
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!serviceKey) return NextResponse.json({ error: 'No service key' }, { status: 500 })
-    if (!body.companyName || !body.contactName || !body.email || !body.phone || !body.promoName) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
+
+    const formData = await req.formData()
+
+    // Read all fields safely as strings
+    const companyName = formData.get('companyName') as string || ''
+    const contactName = formData.get('contactName') as string || ''
+    const email = formData.get('email') as string || ''
+    const phone = formData.get('phone') as string || ''
+    const promoName = formData.get('promoName') as string || ''
+    const minSpend = parseFloat(formData.get('minSpend') as string || '0') || 0
+    const currency = formData.get('currency') as string || 'UGX'
+    const startDate = formData.get('startDate') as string || null
+    const endDate = formData.get('endDate') as string || null
+    const drawDate = formData.get('drawDate') as string || null
+    const prizes = formData.get('prizes') as string || ''
+    const productKeywords = formData.get('productKeywords') as string || ''
+    const termsConditions = formData.get('termsConditions') as string || ''
+    const promoterPin = formData.get('promoterPin') as string || ''
+    const emoji = formData.get('emoji') as string || '🛍'
+    const color = formData.get('color') as string || '#1D9E75'
+    const logoFile = formData.get('logo') as File | null
+
+    // Parse barcodes safely
+    let productBarcodes: string[] = []
+    try {
+      const barcodesRaw = formData.get('productBarcodes') as string
+      if (barcodesRaw) productBarcodes = JSON.parse(barcodesRaw)
+    } catch { productBarcodes = [] }
+
+    // Parse keywords into array
+    const keywordsArray = productKeywords
+      ? productKeywords.split(',').map((k: string) => k.trim()).filter(Boolean)
+      : []
+
+    // Generate ref
+    const ref = 'PR-' + Math.random().toString(36).substring(2, 8).toUpperCase()
+
     const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(SUPABASE_URL, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
-    const ref = 'RRP-' + Math.random().toString(36).substring(2, 8).toUpperCase()
-    const { data, error } = await supabase
+
+    // Upload logo if provided
+    let logoUrl: string | null = null
+    if (logoFile && logoFile.size > 0) {
+      try {
+        const logoBytes = await logoFile.arrayBuffer()
+        const logoBuffer = Buffer.from(logoBytes)
+        const logoExt = logoFile.name.split('.').pop() || 'jpg'
+        const logoPath = `logos/${ref}.${logoExt}`
+        const { error: uploadError } = await supabase.storage
+          .from('logos')
+          .upload(logoPath, logoBuffer, { contentType: logoFile.type, upsert: true })
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('logos').getPublicUrl(logoPath)
+          logoUrl = urlData?.publicUrl || null
+        }
+      } catch { logoUrl = null }
+    }
+
+    const { error: insertError } = await supabase
       .from('promotion_submissions')
       .insert({
-        company_name: body.companyName,
-        contact_name: body.contactName,
-        email: body.email,
-        phone: body.phone,
-        promo_name: body.promoName,
-        description: body.description || '',
-        min_spend: parseInt(body.minSpend) || 0,
-        currency: body.currency || 'USD',
-        max_entries: parseInt(body.maxEntries) || 3,
-        start_date: body.startDate || '',
-        end_date: body.endDate || '',
-        draw_date: body.drawDate || '',
-        prizes: body.prizes || [],
-        product_keywords: body.productKeywords || [],
-        product_barcodes: body.productBarcodes || [],
-        status: 'pending',
+        promo_name: promoName,
+        company_name: companyName,
+        contact_name: contactName,
+        email,
+        phone,
+        min_spend: minSpend,
+        currency,
+        start_date: startDate,
+        end_date: endDate,
+        draw_date: drawDate,
+        prizes,
+        product_keywords: keywordsArray,
+        product_barcodes: productBarcodes,
+        terms_conditions: termsConditions,
+        promoter_pin: promoterPin,
+        emoji,
+        color,
+        logo_url: logoUrl,
         ref,
-        emoji: '🎁',
-        color: '#1D9E75',
-        entries_count: 0,
-        logo_url: body.logoUrl || null,
-        terms_conditions: body.termsConditions || null,
-        promoter_pin: body.pin || null,
+        status: 'pending',
       })
-      .select()
-      .single()
-    if (error) return NextResponse.json({ error: error.message, code: error.code }, { status: 500 })
-    return NextResponse.json({ submission: data }, { status: 201 })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+
+    if (insertError) {
+      console.error('[promotions] Insert error:', insertError.message)
+      return NextResponse.json({ error: insertError.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, ref })
+  } catch (err: unknown) {
+    console.error('[promotions] Fatal error:', err instanceof Error ? err.message : String(err))
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 })
   }
 }
