@@ -56,6 +56,7 @@ export default function LaunchPage() {
     startDate: '', endDate: '', drawDate: '',
     prizes: [''],
     productKeywords: [''],
+    productBarcodes: [''],
     termsConditions: DEFAULT_TCS,
   })
 
