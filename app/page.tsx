@@ -121,9 +121,14 @@ export default function Home() {
           <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>Are you a business?</div>
           <div style={{ fontSize: 13, color: '#9BA4B5', marginBottom: 4 }}>Launch your own AI-powered prize promotion</div>
           <Link href="/for-business" style={{ fontSize: 12, color: '#1D9E75', textDecoration: 'none', display: 'block', marginBottom: 16 }}>Learn more &rarr;</Link>
-          <Link href="/launch" style={{ display: 'inline-block', padding: '11px 28px', background: '#1D9E75', color: '#fff', borderRadius: 8, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
-            Launch a promotion &rarr;
-          </Link>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link href="/launch" style={{ display: 'inline-block', padding: '11px 28px', background: '#1D9E75', color: '#fff', borderRadius: 8, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+              Launch a promotion &rarr;
+            </Link>
+            <Link href="/promoter" style={{ display: 'inline-block', padding: '11px 28px', background: 'rgba(255,255,255,0.1)', color: '#fff', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)' }}>
+              Manage my promotion
+            </Link>
+          </div>
         </div>
       </div>
 
