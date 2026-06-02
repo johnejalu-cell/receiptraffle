@@ -20,7 +20,7 @@ function fuzzyMatch(item: string, keyword: string): boolean {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { imageBase64, mediaType, minSpend, currency, promotionId, name, phone, email, productKeywords } = body
+    const { imageBase64, mediaType, minSpend, currency, promotionId, name, phone, email, productKeywords, productBarcodes } = body
 
     const b64Length = imageBase64?.length || 0
     const estimatedKB = Math.round(b64Length * 0.75 / 1024)
@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
       promotionId,
       minSpend,
       keywords: productKeywords,
+      barcodes: productBarcodes,
     })
     // Return image stats in response for debugging
     const debugInfo = { b64Length, estimatedKB, mediaType }
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
     const ticket = 'RR-' + Math.random().toString(36).substring(2, 10).toUpperCase()
     const safeMediaType = normaliseMediaType(mediaType || '')
     const keywords: string[] = Array.isArray(productKeywords) && productKeywords.length > 0 ? productKeywords : []
+    const barcodes: string[] = Array.isArray(productBarcodes) && productBarcodes.length > 0 ? productBarcodes : []
 
     console.warn('[entries] Safe media type:', safeMediaType, '| Keywords:', keywords)
 
@@ -77,6 +79,10 @@ export async function POST(req: NextRequest) {
         const anthropic = new Anthropic({ apiKey: anthropicKey })
 
         const keywordList = keywords.join('", "')
+        const barcodeInstruction = barcodes.length > 0
+          ? `\nBARCODE CHECK: Also look for these product barcodes on the receipt: ${barcodes.join(', ')}. Receipts sometimes print barcodes or product codes next to line items. If you find a matching barcode, set barcode_found to true and note which one.`
+          : ''
+
         const prompt = keywords.length > 0
           ? `You are verifying a receipt for a sales promotion. Examine this receipt carefully.
 
@@ -86,7 +92,7 @@ TASK: Find items matching this brand/product: "${keywordList}"
 - The brand name may be abbreviated or partially visible, be generous in matching
 - Report the store/retailer name exactly as shown
 - Report the currency shown on the receipt (e.g. USD, GBP, EUR, UGX, KES, etc.)
-- Add up the total spent on matching items only
+- Add up the total spent on matching items only${barcodeInstruction}`
 
 Reply with JSON only, no markdown:
 {
@@ -98,10 +104,12 @@ Reply with JSON only, no markdown:
   "currency": "3-letter currency code detected from receipt",
   "verification_status": "approved or manual_review",
   "verification_reason": "one sentence explaining your decision",
-  "confidence": plain number 0-100 indicating how clearly you can read the receipt
+  "confidence": plain number 0-100 indicating how clearly you can read the receipt,
+  "barcode_found": true or false
 }
 
 Set verification_status to "approved" if you found items matching the brand (even partially) AND their total >= ${minSpend || 0}.
+If a registered barcode is found, that is strong evidence of purchase — factor it positively.
 Set to "manual_review" only if receipt is genuinely unreadable, brand is genuinely absent, or total clearly falls short.`
 
           : `You are verifying a receipt for a sales promotion. Examine this receipt carefully.
@@ -121,7 +129,8 @@ Reply with JSON only, no markdown:
   "currency": "3-letter currency code detected from receipt",
   "verification_status": "approved or manual_review",
   "verification_reason": "one sentence explaining your decision",
-  "confidence": plain number 0-100 indicating how clearly you can read the receipt
+  "confidence": plain number 0-100 indicating how clearly you can read the receipt,
+  "barcode_found": true or false
 }
 
 Set verification_status to "approved" if total_amount >= ${minSpend || 0} and receipt is legible.
@@ -202,16 +211,13 @@ Set to "manual_review" only if receipt is genuinely unreadable or total clearly 
         customer_phone: phone,
         customer_email: email || null,
         ticket_number: ticket,
-        // Save verified spend: promoted items total if keywords, otherwise receipt total
-        amount: keywords.length > 0
-          ? (aiResult.promoted_items_total || 0)
-          : (aiResult.total_amount || 0),
+        amount: aiResult.promoted_items_total || aiResult.total_amount || 0,
         retailer: aiResult.retailer || 'Unknown',
         receipt_date: aiResult.date || null,
         currency: aiResult.currency || currency || 'USD',
         verification_status: isApproved ? 'approved' : 'manual_review',
         ai_confidence: aiResult.confidence || 0,
-        ai_result: aiResult,
+        ai_result: { ...aiResult, barcode_found: aiResult.barcode_found || false },
         receipt_image_path: null,
       })
       if (dbError) {
