@@ -51,7 +51,7 @@ export default function LaunchPage() {
   const [logoUrl, setLogoUrl] = useState('')
 
   const [form, setForm] = useState({
-    companyName: '', contactName: '', email: '', phone: '',
+    companyName: '', contactName: '', email: '', phone: '', pin: '',
     promoName: '', description: '', minSpend: '', currency: 'USD', maxEntries: '3',
     startDate: '', endDate: '', drawDate: '',
     prizes: [''],
@@ -121,6 +121,7 @@ export default function LaunchPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           companyName: form.companyName,
+          pin: form.pin,
           contactName: form.contactName,
           email: form.email,
           phone: form.phone,
@@ -192,6 +193,11 @@ export default function LaunchPage() {
               <div><label style={labelStyle}>Contact person name *</label><input style={inputStyle} value={form.contactName} onChange={e => set('contactName', e.target.value)} placeholder="Your full name" /></div>
               <div><label style={labelStyle}>Email address *</label><input style={inputStyle} type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="you@company.com" /></div>
               <div><label style={labelStyle}>Phone number *</label><input style={inputStyle} type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+1 555 000 0000" /></div>
+              <div>
+                <label style={labelStyle}>Set your portal PIN *</label>
+                <p style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>Choose a 4-6 digit PIN you will use to access your promoter portal. Keep it safe.</p>
+                <input style={inputStyle} type="password" inputMode="numeric" maxLength={6} value={form.pin} onChange={e => set('pin', e.target.value.replace(/\D/g, ''))} placeholder="e.g. 1234" />
+              </div>
 
               {/* Logo upload */}
               <div>
@@ -217,7 +223,7 @@ export default function LaunchPage() {
                 )}
               </div>
 
-              <button onClick={() => { if (!form.companyName || !form.contactName || !form.email || !form.phone) { alert('Please fill in all required fields'); return } setStep(2) }}
+              <button onClick={() => { if (!form.companyName || !form.contactName || !form.email || !form.phone) { alert('Please fill in all required fields'); return } if (!form.pin || form.pin.length < 4) { alert('Please set a PIN of at least 4 digits'); return } setStep(2) }}
                 style={{ width: '100%', padding: '14px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
                 Next: Promotion details →
               </button>
