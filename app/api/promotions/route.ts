@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
         draw_date: body.drawDate || '',
         prizes: body.prizes || [],
         product_keywords: body.productKeywords || [],
+        product_barcodes: body.productBarcodes || [],
         status: 'pending',
         ref,
         emoji: '🎁',
