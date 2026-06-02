@@ -135,6 +135,7 @@ export default function LaunchPage() {
           drawDate: form.drawDate,
           prizes: form.prizes.filter(Boolean),
           productKeywords: form.productKeywords.filter(Boolean),
+          productBarcodes: form.productBarcodes.filter(Boolean),
           logoUrl: finalLogoUrl,
           termsConditions: form.termsConditions,
         })
@@ -155,9 +156,12 @@ export default function LaunchPage() {
         <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
         <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Submission received!</h1>
         <p style={{ fontSize: 14, color: '#666', marginBottom: 20 }}>Your promotion has been submitted for review. Our team will be in touch shortly.</p>
-        <div style={{ background: '#E8F8F2', borderRadius: 12, padding: '1rem', marginBottom: 24 }}>
+        <div style={{ background: '#E8F8F2', borderRadius: 12, padding: '1rem', marginBottom: 16 }}>
           <div style={{ fontSize: 12, color: '#0F6E56', marginBottom: 4 }}>Your reference number</div>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#085041', letterSpacing: 2 }}>{ref}</div>
+        </div>
+        <div style={{ background: '#f5f5f0', borderRadius: 10, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: '#444' }}>
+          <strong>Keep your PIN safe.</strong> You will need your email address and PIN to access your promoter portal at <strong>receiptraffle-ygef.vercel.app/promoter</strong>
         </div>
         {fee && (
           <div style={{ background: '#FFF8E6', border: '1px solid #FAC775', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#633806', marginBottom: 20 }}>
@@ -165,7 +169,12 @@ export default function LaunchPage() {
             {fee.description && <div style={{ marginTop: 6, fontSize: 12 }}>{fee.description}</div>}
           </div>
         )}
-        <Link href="/" style={{ display: 'inline-block', padding: '12px 28px', background: '#1D9E75', color: '#fff', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>Back to home</Link>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+          <Link href="/promoter" style={{ display: 'inline-block', padding: '12px 28px', background: '#1D9E75', color: '#fff', borderRadius: 10, fontWeight: 700, textDecoration: 'none' }}>
+            Access your promoter portal →
+          </Link>
+          <Link href="/" style={{ fontSize: 13, color: '#888', textDecoration: 'none' }}>← Back to home</Link>
+        </div>
       </div>
     </main>
   )
@@ -253,6 +262,22 @@ export default function LaunchPage() {
                   ))}
                 </div>
                 <button onClick={addKeyword} style={{ width: '100%', padding: '10px', background: '#fff', border: '1.5px dashed #d0d0c8', borderRadius: 10, fontSize: 14, color: '#666', cursor: 'pointer' }}>+ Add another product</button>
+              </div>
+              <div>
+                <label style={labelStyle}>Product barcodes (optional)</label>
+                <p style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>Add the barcode numbers printed on your products. The AI will look for these on customer receipts for extra verification accuracy.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+                  {form.productBarcodes.map((bc: string, i: number) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input value={bc} onChange={e => setBarcode(i, e.target.value.replace(/[^0-9]/g, ''))} placeholder="e.g. 5012345678900" inputMode="numeric"
+                        style={{ flex: 1, padding: '11px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff', fontFamily: 'monospace' }} />
+                      {form.productBarcodes.length > 1 && (
+                        <button onClick={() => removeBarcode(i)} style={{ width: 32, height: 32, background: '#FCEBEB', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 16, color: '#A32D2D', flexShrink: 0 }}>x</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={addBarcode} style={{ width: '100%', padding: '10px', background: '#fff', border: '1.5px dashed #d0d0c8', borderRadius: 10, fontSize: 14, color: '#666', cursor: 'pointer' }}>+ Add another barcode</button>
               </div>
               <div>
                 <label style={labelStyle}>Minimum spend on promoted products *</label>
