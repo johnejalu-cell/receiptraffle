@@ -55,15 +55,6 @@ export default function HomePage() {
 
       <div style={{ maxWidth: '600px', margin: '0 auto', padding: '0 16px' }}>
 
-        {/* Promoter quick link — visible near top */}
-        <div style={{ background: 'white', borderRadius: '12px', padding: '16px 20px', margin: '20px 0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '15px', color: '#111' }}>Already running a promotion?</div>
-            <div style={{ color: '#666', fontSize: '13px' }}>View entries, run your draw and manage your promotion.</div>
-          </div>
-          <a href="/promoter" style={{ background: '#1D9E75', color: 'white', padding: '10px 16px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '14px', whiteSpace: 'nowrap' }}>Manage →</a>
-        </div>
-
         {/* Active promotions */}
         <div style={{ marginBottom: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
@@ -106,18 +97,22 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Business section */}
-        <div style={{ background: 'white', borderRadius: '12px', padding: '24px', margin: '24px 0', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', textAlign: 'center' }}>
-          <div style={{ fontSize: '13px', color: '#888', marginBottom: '6px', fontWeight: 600 }}>Are you a business?</div>
-          <div style={{ fontWeight: 700, fontSize: '17px', color: '#111', marginBottom: '16px' }}>Launch your own AI-powered prize promotion</div>
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/for-business" style={{ background: '#f3f4f6', color: '#333', padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '14px' }}>Learn more →</a>
-            <a href="/launch" style={{ background: '#1D9E75', color: 'white', padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '14px' }}>Launch a promotion →</a>
-          </div>
-        </div>
-
-        <div style={{ textAlign: 'center', paddingBottom: '32px' }}>
+        <div style={{ textAlign: 'center', paddingBottom: '100px' }}>
           <a href="/admin" style={{ color: '#ccc', fontSize: '12px', textDecoration: 'none' }}>Admin</a>
+        </div>
+      </div>
+
+      {/* Sticky business bar — always visible at bottom */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', borderTop: '1px solid #e5e7eb', padding: '12px 16px', boxShadow: '0 -4px 16px rgba(0,0,0,0.08)', zIndex: 100 }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '14px', color: '#111' }}>Are you a business?</div>
+            <div style={{ fontSize: '12px', color: '#888' }}>Launch or manage your promotion</div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <a href="/promoter" style={{ background: '#f3f4f6', color: '#333', padding: '9px 14px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '13px', whiteSpace: 'nowrap' }}>Manage →</a>
+            <a href="/launch" style={{ background: '#1D9E75', color: 'white', padding: '9px 14px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '13px', whiteSpace: 'nowrap' }}>Launch →</a>
+          </div>
         </div>
       </div>
     </div>
