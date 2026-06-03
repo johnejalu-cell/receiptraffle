@@ -1,6 +1,47 @@
+'use client'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
+interface Content {
+  biz_hero_title?: string
+  biz_hero_subtitle?: string
+  biz_problem_title?: string
+  biz_solution_title?: string
+  biz_pricing_title?: string
+  biz_pricing_subtitle?: string
+  biz_pricing_amount?: string
+  biz_pricing_note?: string
+  biz_cta_title?: string
+  biz_cta_subtitle?: string
+  contact_email?: string
+}
+
+const DEFAULTS: Content = {
+  biz_hero_title: 'Run smarter promotions. Verify every receipt. Instantly.',
+  biz_hero_subtitle: 'ReceiptRaffle solves the biggest challenge in promotional marketing — verifying proof of purchase at scale, without manual checking or geographic limits.',
+  biz_problem_title: 'Proof of purchase promotions are hard to run well',
+  biz_solution_title: 'AI that reads every receipt in seconds',
+  biz_pricing_title: 'One flat fee per promotion',
+  biz_pricing_subtitle: 'No subscriptions. No per-entry fees. No surprises.',
+  biz_pricing_amount: 'Contact us',
+  biz_pricing_note: 'Running multiple promotions? Contact us for volume pricing.',
+  biz_cta_title: 'Ready to run a smarter promotion?',
+  biz_cta_subtitle: 'Join businesses using ReceiptRaffle to run fair, verified prize promotions at scale.',
+  contact_email: 'hello@receiptraffle.com',
+}
+
 export default function ForBusinessPage() {
+  const [content, setContent] = useState<Content>(DEFAULTS)
+
+  useEffect(() => {
+    fetch('/api/content')
+      .then(r => r.json())
+      .then(d => { if (d.content) setContent({ ...DEFAULTS, ...d.content }) })
+      .catch(() => {})
+  }, [])
+
+  const c = content
+
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: 'system-ui, sans-serif' }}>
 
@@ -14,8 +55,8 @@ export default function ForBusinessPage() {
       <div style={{ background: 'linear-gradient(135deg, #1D9E75 0%, #157a5a 100%)', color: 'white', padding: '64px 24px', textAlign: 'center' }}>
         <div style={{ maxWidth: '680px', margin: '0 auto' }}>
           <div style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '2px', opacity: 0.8, marginBottom: '12px' }}>FOR BUSINESSES</div>
-          <h1 style={{ fontSize: '36px', fontWeight: 800, margin: '0 0 16px', lineHeight: 1.2 }}>Run smarter promotions.<br />Verify every receipt. Instantly.</h1>
-          <p style={{ fontSize: '17px', opacity: 0.9, margin: '0 0 32px', lineHeight: 1.6 }}>ReceiptRaffle solves the biggest challenge in promotional marketing — verifying proof of purchase at scale, without manual checking or geographic limits.</p>
+          <h1 style={{ fontSize: '36px', fontWeight: 800, margin: '0 0 16px', lineHeight: 1.2 }}>{c.biz_hero_title}</h1>
+          <p style={{ fontSize: '17px', opacity: 0.9, margin: '0 0 32px', lineHeight: 1.6 }}>{c.biz_hero_subtitle}</p>
           <Link href="/launch" style={{ background: 'white', color: '#1D9E75', padding: '14px 28px', borderRadius: '10px', textDecoration: 'none', fontWeight: 700, fontSize: '16px', display: 'inline-block' }}>Launch your promotion →</Link>
         </div>
       </div>
@@ -25,7 +66,7 @@ export default function ForBusinessPage() {
         {/* Problem */}
         <div style={{ padding: '56px 0 0' }}>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#1D9E75', letterSpacing: '1px', marginBottom: '8px' }}>THE PROBLEM WE SOLVE</div>
-          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#111', margin: '0 0 40px' }}>Proof of purchase promotions are hard to run well</h2>
+          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#111', margin: '0 0 40px' }}>{c.biz_problem_title}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
             {[
               ['💸', 'Expensive manual verification', 'Hiring teams to manually check thousands of receipts costs a fortune and takes weeks.'],
@@ -45,7 +86,7 @@ export default function ForBusinessPage() {
         {/* Solution */}
         <div style={{ padding: '56px 0 0' }}>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#1D9E75', letterSpacing: '1px', marginBottom: '8px' }}>THE RECEIPTRAFFLE SOLUTION</div>
-          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#111', margin: '0 0 40px' }}>AI that reads every receipt in seconds</h2>
+          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#111', margin: '0 0 40px' }}>{c.biz_solution_title}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
             {[
               ['🤖', 'AI-powered verification', 'Every receipt is scanned and verified by Claude AI. Retailer, amount, date and products are extracted automatically. Results in under 5 seconds.'],
@@ -90,13 +131,21 @@ export default function ForBusinessPage() {
         {/* Pricing */}
         <div style={{ padding: '56px 0 0' }}>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#1D9E75', letterSpacing: '1px', marginBottom: '8px' }}>SIMPLE PRICING</div>
-          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#111', margin: '0 0 32px' }}>One flat fee per promotion</h2>
+          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#111', margin: '0 0 8px' }}>{c.biz_pricing_title}</h2>
+          <p style={{ color: '#666', fontSize: '15px', margin: '0 0 32px' }}>{c.biz_pricing_subtitle}</p>
           <div style={{ background: 'white', borderRadius: '16px', padding: '36px', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', textAlign: 'center', maxWidth: '400px', margin: '0 auto' }}>
             <div style={{ fontSize: '14px', color: '#888', marginBottom: '8px', fontWeight: 600 }}>Per promotion</div>
-            <div style={{ fontSize: '48px', fontWeight: 800, color: '#1D9E75', marginBottom: '4px' }}>Contact us</div>
+            <div style={{ fontSize: '40px', fontWeight: 800, color: '#1D9E75', marginBottom: '4px' }}>{c.biz_pricing_amount}</div>
             <div style={{ color: '#888', fontSize: '14px', marginBottom: '24px' }}>One-time fee · Unlimited entries</div>
             <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
-              {['AI receipt verification for every entry', 'Reach customers anywhere — no geographic limits', 'Fraud detection and duplicate checking', 'Real-time dashboard and audit logs', 'Fair draw engine with full audit trail', 'Winner notification support'].map(f => (
+              {[
+                'AI receipt verification for every entry',
+                'Reach customers anywhere — no geographic limits',
+                'Fraud detection and duplicate checking',
+                'Real-time dashboard and audit logs',
+                'Fair draw engine with full audit trail',
+                'Winner notification support',
+              ].map(f => (
                 <div key={f} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '14px', color: '#333' }}>
                   <span style={{ color: '#1D9E75', fontWeight: 700, flexShrink: 0 }}>✓</span>
                   <span>{f}</span>
@@ -105,20 +154,19 @@ export default function ForBusinessPage() {
             </div>
             <Link href="/launch" style={{ display: 'block', background: '#1D9E75', color: 'white', padding: '14px', borderRadius: '10px', textDecoration: 'none', fontWeight: 700, fontSize: '16px' }}>Launch your promotion →</Link>
           </div>
-          <p style={{ textAlign: 'center', marginTop: '20px', color: '#888', fontSize: '14px' }}>Running multiple promotions? Contact us for volume pricing.</p>
+          <p style={{ textAlign: 'center', marginTop: '20px', color: '#888', fontSize: '14px' }}>{c.biz_pricing_note}</p>
         </div>
 
         {/* CTA */}
         <div style={{ padding: '56px 0', textAlign: 'center' }}>
-          <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#111', marginBottom: '12px' }}>Ready to run a smarter promotion?</h2>
-          <p style={{ color: '#666', marginBottom: '28px', fontSize: '15px' }}>Join businesses using ReceiptRaffle to run fair, verified prize promotions at scale.</p>
+          <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#111', marginBottom: '12px' }}>{c.biz_cta_title}</h2>
+          <p style={{ color: '#666', marginBottom: '28px', fontSize: '15px' }}>{c.biz_cta_subtitle}</p>
           <Link href="/launch" style={{ background: '#1D9E75', color: 'white', padding: '14px 28px', borderRadius: '10px', textDecoration: 'none', fontWeight: 700, fontSize: '16px', display: 'inline-block', marginBottom: '20px' }}>Launch a promotion →</Link>
-          <p style={{ color: '#888', fontSize: '14px' }}>Questions? Email us at <a href="mailto:hello@receiptraffle.com" style={{ color: '#1D9E75' }}>hello@receiptraffle.com</a></p>
+          <p style={{ color: '#888', fontSize: '14px' }}>Questions? Email us at <a href={`mailto:${c.contact_email}`} style={{ color: '#1D9E75' }}>{c.contact_email}</a></p>
           <div style={{ marginTop: '24px' }}>
             <Link href="/" style={{ color: '#888', fontSize: '14px', textDecoration: 'none' }}>← Back to promotions</Link>
           </div>
         </div>
-
       </div>
     </div>
   )
