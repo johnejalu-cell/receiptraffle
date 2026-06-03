@@ -2,38 +2,39 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const SUPABASE_URL = 'https://qnpjawyeekhkzvrorqyv.supabase.co'
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const email = req.nextUrl.searchParams.get('email')
-    const promotionId = req.nextUrl.searchParams.get('promotion_id')
-    if (!email || !promotionId) return NextResponse.json({ error: 'Email and promotion_id required' }, { status: 400 })
+    const { promotionId, email, pin } = await req.json()
+    if (!promotionId || !email || !pin) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!serviceKey) return NextResponse.json({ error: 'Server error' }, { status: 500 })
 
     const { createClient } = await import('@supabase/supabase-js')
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!serviceKey) return NextResponse.json({ error: 'No service key' }, { status: 500 })
-    const supabase = createClient(SUPABASE_URL, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    })
+    const supabase = createClient(SUPABASE_URL, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 
-    // Verify this promotion belongs to this email
-    const { data: promo } = await supabase
+    // Verify promoter owns this promotion
+    const { data: promo, error: promoError } = await supabase
       .from('promotion_submissions')
-      .select('id, email')
+      .select('id')
       .eq('id', promotionId)
-      .eq('email', email.toLowerCase().trim())
+      .eq('email', email.trim().toLowerCase())
+      .eq('promoter_pin', pin.trim())
       .single()
 
-    if (!promo) return NextResponse.json({ error: 'Promotion not found or access denied' }, { status: 403 })
+    if (promoError || !promo) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
 
-    const { data: entries, error } = await supabase
+    // Fetch entries
+    const { data: entries, error: entriesError } = await supabase
       .from('customer_entries')
-      .select('*')
+      .select('id, customer_name, customer_phone, customer_email, ticket_number, amount, currency, retailer, receipt_date, verification_status, ai_confidence, created_at')
       .eq('promotion_id', promotionId)
       .order('created_at', { ascending: false })
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (entriesError) return NextResponse.json({ error: entriesError.message }, { status: 500 })
+
     return NextResponse.json({ entries: entries || [] })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 })
   }
 }
