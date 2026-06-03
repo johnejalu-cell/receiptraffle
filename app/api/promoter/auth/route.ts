@@ -7,34 +7,23 @@ export async function POST(req: NextRequest) {
     const { email, pin } = await req.json()
     if (!email || !pin) return NextResponse.json({ error: 'Email and PIN required' }, { status: 400 })
 
-    const { createClient } = await import('@supabase/supabase-js')
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!serviceKey) return NextResponse.json({ error: 'No service key' }, { status: 500 })
-    const supabase = createClient(SUPABASE_URL, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    })
+    if (!serviceKey) return NextResponse.json({ error: 'Server error' }, { status: 500 })
+
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(SUPABASE_URL, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 
     const { data, error } = await supabase
       .from('promotion_submissions')
-      .select('id, email, contact_name, promoter_pin')
-      .eq('email', email.toLowerCase().trim())
-      .limit(1)
-      .single()
+      .select('id, promo_name, company_name, status, draw_date, start_date, end_date, prizes, currency, min_spend, emoji, color, logo_url, ref')
+      .eq('email', email.trim().toLowerCase())
+      .eq('promoter_pin', pin.trim())
 
-    if (error || !data) {
-      return NextResponse.json({ error: 'No account found for this email address' }, { status: 404 })
-    }
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (!data || data.length === 0) return NextResponse.json({ error: 'Invalid email or PIN' }, { status: 401 })
 
-    if (!data.promoter_pin) {
-      return NextResponse.json({ error: 'No PIN set for this account. Please contact support.' }, { status: 401 })
-    }
-
-    if (data.promoter_pin !== pin.trim()) {
-      return NextResponse.json({ error: 'Incorrect PIN. Please try again.' }, { status: 401 })
-    }
-
-    return NextResponse.json({ success: true, name: data.contact_name })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true, promotions: data })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 })
   }
 }
