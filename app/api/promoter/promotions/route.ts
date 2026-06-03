@@ -2,54 +2,47 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const SUPABASE_URL = 'https://qnpjawyeekhkzvrorqyv.supabase.co'
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const email = req.nextUrl.searchParams.get('email')
-    if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
+    const { promotionId, email, pin, updates } = await req.json()
+    if (!promotionId || !email || !pin) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!serviceKey) return NextResponse.json({ error: 'Server error' }, { status: 500 })
 
     const { createClient } = await import('@supabase/supabase-js')
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!serviceKey) return NextResponse.json({ error: 'No service key' }, { status: 500 })
-    const supabase = createClient(SUPABASE_URL, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    })
+    const supabase = createClient(SUPABASE_URL, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 
-    // Get all promotions for this email
-    const { data: promotions, error } = await supabase
+    // Verify promoter owns this promotion
+    const { data: promo, error: promoError } = await supabase
       .from('promotion_submissions')
-      .select('*')
-      .eq('email', email.toLowerCase().trim())
-      .order('created_at', { ascending: false })
+      .select('id')
+      .eq('id', promotionId)
+      .eq('email', email.trim().toLowerCase())
+      .eq('promoter_pin', pin.trim())
+      .single()
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    if (!promotions || promotions.length === 0) {
-      return NextResponse.json({ promotions: [] })
-    }
+    if (promoError || !promo) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 })
 
-    // Get entry counts per promotion
-    const ids = promotions.map((p: any) => p.id)
-    const { data: entries } = await supabase
-      .from('customer_entries')
-      .select('promotion_id, verification_status')
-      .in('promotion_id', ids)
+    // Only allow safe fields to be updated - never min_spend or currency
+    const safeUpdates: Record<string, unknown> = {}
+    if (updates.promo_name !== undefined) safeUpdates.promo_name = updates.promo_name
+    if (updates.draw_date !== undefined) safeUpdates.draw_date = updates.draw_date
+    if (updates.end_date !== undefined) safeUpdates.end_date = updates.end_date
+    if (updates.prizes !== undefined) safeUpdates.prizes = updates.prizes
+    if (updates.product_keywords !== undefined) safeUpdates.product_keywords = updates.product_keywords
+    if (updates.product_barcodes !== undefined) safeUpdates.product_barcodes = updates.product_barcodes
+    if (updates.terms_conditions !== undefined) safeUpdates.terms_conditions = updates.terms_conditions
 
-    const countMap: Record<string, { total: number, approved: number, review: number }> = {}
-    if (entries) {
-      entries.forEach((e: any) => {
-        if (!countMap[e.promotion_id]) countMap[e.promotion_id] = { total: 0, approved: 0, review: 0 }
-        countMap[e.promotion_id].total++
-        if (e.verification_status === 'approved') countMap[e.promotion_id].approved++
-        if (e.verification_status === 'manual_review') countMap[e.promotion_id].review++
-      })
-    }
+    const { error: updateError } = await supabase
+      .from('promotion_submissions')
+      .update(safeUpdates)
+      .eq('id', promotionId)
 
-    const result = promotions.map((p: any) => ({
-      ...p,
-      counts: countMap[p.id] || { total: 0, approved: 0, review: 0 }
-    }))
+    if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
-    return NextResponse.json({ promotions: result })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true })
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 })
   }
 }
