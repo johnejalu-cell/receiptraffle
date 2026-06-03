@@ -109,7 +109,8 @@ export default function HomePage() {
             <div style={{ fontWeight: 700, fontSize: '14px', color: '#111' }}>Are you a business?</div>
             <div style={{ fontSize: '12px', color: '#888' }}>Launch or manage your promotion</div>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <a href="/for-business" style={{ background: '#f3f4f6', color: '#333', padding: '9px 14px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '13px', whiteSpace: 'nowrap' }}>Learn more</a>
             <a href="/promoter" style={{ background: '#f3f4f6', color: '#333', padding: '9px 14px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '13px', whiteSpace: 'nowrap' }}>Manage →</a>
             <a href="/launch" style={{ background: '#1D9E75', color: 'white', padding: '9px 14px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '13px', whiteSpace: 'nowrap' }}>Launch →</a>
           </div>
