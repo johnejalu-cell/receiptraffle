@@ -15,6 +15,9 @@ interface Promotion {
   emoji: string
   color: string
   ref: string
+  product_keywords: string[]
+  product_barcodes: string[]
+  terms_conditions: string
 }
 
 interface Entry {
@@ -52,6 +55,11 @@ export default function PromoterPage() {
   const [drawLoading, setDrawLoading] = useState(false)
   const [drawError, setDrawError] = useState('')
   const [loggedIn, setLoggedIn] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+  const [editForm, setEditForm] = useState<Partial<Promotion>>({})
+  const [editBarcodes, setEditBarcodes] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
+  const [saveMsg, setSaveMsg] = useState('')
 
   const login = async () => {
     setLoading(true); setError('')
@@ -75,6 +83,7 @@ export default function PromoterPage() {
     setSelectedPromo(promo)
     setWinner(null)
     setDrawError('')
+    setShowEdit(false)
     setEntriesLoading(true)
     try {
       const res = await fetch('/api/promoter/entries', {
@@ -85,9 +94,53 @@ export default function PromoterPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setEntries(data.entries || [])
-    } catch {
-      setEntries([])
-    } finally { setEntriesLoading(false) }
+    } catch { setEntries([]) }
+    finally { setEntriesLoading(false) }
+  }
+
+  const openEdit = () => {
+    if (!selectedPromo) return
+    setEditForm({
+      promo_name: selectedPromo.promo_name,
+      draw_date: selectedPromo.draw_date?.split('T')[0] || '',
+      end_date: selectedPromo.end_date?.split('T')[0] || '',
+      prizes: selectedPromo.prizes,
+      product_keywords: selectedPromo.product_keywords,
+      terms_conditions: selectedPromo.terms_conditions,
+    })
+    setEditBarcodes(selectedPromo.product_barcodes?.length ? selectedPromo.product_barcodes : [])
+    setShowEdit(true)
+    setSaveMsg('')
+  }
+
+  const saveEdit = async () => {
+    if (!selectedPromo) return
+    setSaving(true); setSaveMsg('')
+    try {
+      const keywordsArray = typeof editForm.product_keywords === 'string'
+        ? (editForm.product_keywords as string).split(',').map(k => k.trim()).filter(Boolean)
+        : editForm.product_keywords || []
+      const res = await fetch('/api/promoter/promotions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          promotionId: selectedPromo.id,
+          email: email.trim().toLowerCase(),
+          pin: pin.trim(),
+          updates: { ...editForm, product_keywords: keywordsArray, product_barcodes: editBarcodes.filter(Boolean) },
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      // Update local state
+      const updated = { ...selectedPromo, ...editForm, product_keywords: keywordsArray, product_barcodes: editBarcodes.filter(Boolean) }
+      setSelectedPromo(updated)
+      setPromotions(prev => prev.map(p => p.id === updated.id ? updated : p))
+      setSaveMsg('Saved successfully!')
+      setTimeout(() => setShowEdit(false), 1200)
+    } catch (e: unknown) {
+      setSaveMsg(e instanceof Error ? e.message : 'Save failed')
+    } finally { setSaving(false) }
   }
 
   const downloadCSV = () => {
@@ -128,7 +181,9 @@ export default function PromoterPage() {
   const approvedCount = entries.filter(e => e.verification_status === 'approved').length
   const reviewCount = entries.filter(e => e.verification_status === 'manual_review').length
   const inp: React.CSSProperties = { width: '100%', padding: '11px 14px', border: '1px solid #ccc', borderRadius: '8px', fontSize: '15px', boxSizing: 'border-box' }
+  const lbl: React.CSSProperties = { display: 'block', fontWeight: 600, fontSize: '14px', marginBottom: '5px', color: '#333' }
 
+  // LOGIN
   if (!loggedIn) return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div style={{ background: 'white', borderRadius: '16px', padding: '40px', maxWidth: '420px', width: '100%', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
@@ -138,11 +193,11 @@ export default function PromoterPage() {
           <p style={{ color: '#666', fontSize: '14px' }}>Sign in with the email and PIN you set when launching your promotion.</p>
         </div>
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontWeight: 600, fontSize: '14px', marginBottom: '5px' }}>Email address</label>
+          <label style={lbl}>Email address</label>
           <input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" />
         </div>
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontWeight: 600, fontSize: '14px', marginBottom: '5px' }}>Your PIN</label>
+          <label style={lbl}>Your PIN</label>
           <input style={inp} type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="Enter your PIN" onKeyDown={e => e.key === 'Enter' && login()} />
         </div>
         {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '12px', color: '#dc2626', fontSize: '14px', marginBottom: '16px' }}>{error}</div>}
@@ -157,6 +212,7 @@ export default function PromoterPage() {
     </div>
   )
 
+  // PROMOTION LIST
   if (!selectedPromo) return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', padding: '24px' }}>
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
@@ -178,6 +234,61 @@ export default function PromoterPage() {
     </div>
   )
 
+  // EDIT PANEL
+  if (showEdit) return (
+    <div style={{ minHeight: '100vh', background: '#f9fafb', padding: '24px' }}>
+      <div style={{ maxWidth: '560px', margin: '0 auto' }}>
+        <button onClick={() => setShowEdit(false)} style={{ background: 'none', border: 'none', color: '#1D9E75', cursor: 'pointer', fontSize: '14px', fontWeight: 600, marginBottom: '16px' }}>← Back to dashboard</button>
+        <h1 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '4px' }}>Edit promotion</h1>
+        <p style={{ color: '#888', fontSize: '13px', marginBottom: '24px' }}>Minimum spend and currency cannot be changed once a promotion is live.</p>
+        <div style={{ background: 'white', borderRadius: '16px', padding: '28px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          <div style={{ marginBottom: '18px' }}>
+            <label style={lbl}>Promotion name</label>
+            <input style={inp} value={editForm.promo_name || ''} onChange={e => setEditForm(f => ({ ...f, promo_name: e.target.value }))} />
+          </div>
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '18px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={lbl}>End date</label>
+              <input style={inp} type="date" value={editForm.end_date || ''} onChange={e => setEditForm(f => ({ ...f, end_date: e.target.value }))} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={lbl}>Draw date</label>
+              <input style={inp} type="date" value={editForm.draw_date || ''} onChange={e => setEditForm(f => ({ ...f, draw_date: e.target.value }))} />
+            </div>
+          </div>
+          <div style={{ marginBottom: '18px' }}>
+            <label style={lbl}>Prizes</label>
+            <textarea style={{ ...inp, minHeight: '80px', resize: 'vertical' }} value={editForm.prizes || ''} onChange={e => setEditForm(f => ({ ...f, prizes: e.target.value }))} />
+          </div>
+          <div style={{ marginBottom: '18px' }}>
+            <label style={lbl}>Product keywords</label>
+            <p style={{ fontSize: '13px', color: '#888', marginBottom: '6px' }}>Comma-separated</p>
+            <input style={inp} value={Array.isArray(editForm.product_keywords) ? editForm.product_keywords.join(', ') : (editForm.product_keywords || '')} onChange={e => setEditForm(f => ({ ...f, product_keywords: e.target.value.split(',').map(k => k.trim()).filter(Boolean) }))} placeholder="e.g. Mukwano, cooking oil" />
+          </div>
+          <div style={{ marginBottom: '18px' }}>
+            <label style={lbl}>Product barcodes</label>
+            {editBarcodes.map((bc, i) => (
+              <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                <input value={bc} onChange={e => { const b = [...editBarcodes]; b[i] = e.target.value.replace(/[^0-9]/g, ''); setEditBarcodes(b) }} style={{ flex: 1, padding: '10px 12px', border: '1px solid #ccc', borderRadius: '8px', fontSize: '15px' }} placeholder="e.g. 5901234123457" maxLength={20} />
+                <button onClick={() => setEditBarcodes(editBarcodes.filter((_, n) => n !== i))} style={{ width: '32px', height: '32px', background: '#fee2e2', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#dc2626', fontWeight: 700, fontSize: '18px' }}>×</button>
+              </div>
+            ))}
+            <button onClick={() => setEditBarcodes([...editBarcodes, ''])} style={{ marginTop: '6px', padding: '8px 14px', background: '#f0fdf4', border: '1px solid #1D9E75', borderRadius: '8px', color: '#1D9E75', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>+ Add barcode</button>
+          </div>
+          <div style={{ marginBottom: '18px' }}>
+            <label style={lbl}>Terms &amp; Conditions</label>
+            <textarea style={{ ...inp, minHeight: '200px', fontFamily: 'monospace', fontSize: '13px', resize: 'vertical' }} value={editForm.terms_conditions || ''} onChange={e => setEditForm(f => ({ ...f, terms_conditions: e.target.value }))} />
+          </div>
+          {saveMsg && <div style={{ padding: '12px', borderRadius: '8px', marginBottom: '16px', background: saveMsg.includes('success') ? '#f0fdf4' : '#fef2f2', color: saveMsg.includes('success') ? '#16a34a' : '#dc2626', fontSize: '14px', fontWeight: 600 }}>{saveMsg}</div>}
+          <button onClick={saveEdit} disabled={saving} style={{ width: '100%', padding: '13px', background: saving ? '#9ca3af' : '#1D9E75', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 700, fontSize: '15px', cursor: saving ? 'not-allowed' : 'pointer' }}>
+            {saving ? 'Saving...' : 'Save changes →'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+
+  // DASHBOARD
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', padding: '24px' }}>
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>
@@ -195,7 +306,7 @@ export default function PromoterPage() {
 
         <div style={{ display: 'flex', gap: '12px', margin: '20px 0', flexWrap: 'wrap' }}>
           {[{ label: 'Total entries', value: entries.length, color: '#1D9E75' }, { label: 'Approved', value: approvedCount, color: '#16a34a' }, { label: 'Under review', value: reviewCount, color: '#d97706' }].map(s => (
-            <div key={s.label} style={{ flex: 1, minWidth: '100px', background: 'white', borderRadius: '12px', padding: '16px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+            <div key={s.label} style={{ flex: 1, minWidth: '90px', background: 'white', borderRadius: '12px', padding: '16px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
               <div style={{ fontSize: '28px', fontWeight: 700, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: '13px', color: '#666' }}>{s.label}</div>
             </div>
@@ -203,11 +314,14 @@ export default function PromoterPage() {
         </div>
 
         <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
-          <button onClick={downloadCSV} disabled={!entries.length} style={{ padding: '11px 20px', background: entries.length ? '#1D9E75' : '#e5e7eb', border: 'none', borderRadius: '8px', color: entries.length ? 'white' : '#9ca3af', fontWeight: 600, fontSize: '14px', cursor: entries.length ? 'pointer' : 'not-allowed' }}>
-            ⬇ Download entries CSV
+          <button onClick={downloadCSV} disabled={!entries.length} style={{ padding: '11px 18px', background: entries.length ? '#1D9E75' : '#e5e7eb', border: 'none', borderRadius: '8px', color: entries.length ? 'white' : '#9ca3af', fontWeight: 600, fontSize: '14px', cursor: entries.length ? 'pointer' : 'not-allowed' }}>
+            ⬇ Download CSV
           </button>
-          <button onClick={runDraw} disabled={drawLoading || approvedCount === 0} style={{ padding: '11px 20px', background: approvedCount > 0 ? '#7c3aed' : '#e5e7eb', border: 'none', borderRadius: '8px', color: approvedCount > 0 ? 'white' : '#9ca3af', fontWeight: 600, fontSize: '14px', cursor: approvedCount > 0 ? 'pointer' : 'not-allowed' }}>
+          <button onClick={runDraw} disabled={drawLoading || approvedCount === 0} style={{ padding: '11px 18px', background: approvedCount > 0 ? '#7c3aed' : '#e5e7eb', border: 'none', borderRadius: '8px', color: approvedCount > 0 ? 'white' : '#9ca3af', fontWeight: 600, fontSize: '14px', cursor: approvedCount > 0 ? 'pointer' : 'not-allowed' }}>
             {drawLoading ? 'Drawing...' : '🎰 Run prize draw'}
+          </button>
+          <button onClick={openEdit} style={{ padding: '11px 18px', background: '#f3f4f6', border: 'none', borderRadius: '8px', color: '#333', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
+            ✏️ Edit promotion
           </button>
         </div>
 
@@ -231,7 +345,7 @@ export default function PromoterPage() {
           {entriesLoading ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>Loading entries...</div>
           ) : entries.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>No entries yet.</div>
+            <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>No entries yet. Share your promotion to get started!</div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
@@ -263,7 +377,6 @@ export default function PromoterPage() {
             </div>
           )}
         </div>
-
         <button onClick={() => setLoggedIn(false)} style={{ marginTop: '20px', background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '14px' }}>← Sign out</button>
       </div>
     </div>
