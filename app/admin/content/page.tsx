@@ -131,7 +131,8 @@ export default function AdminContentPage() {
     </div>
   )
 
-  const sections = [...new Set(FIELDS.map(f => f.section))]
+  const sections = FIELDS.map(f => f.section).filter((s, i, arr) => arr.indexOf(s) === i)
+
 
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', padding: '24px', fontFamily: 'system-ui, sans-serif' }}>
