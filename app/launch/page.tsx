@@ -15,6 +15,14 @@ const TERMS = `TERMS AND CONDITIONS
 8. DATA: Entry data used only to administer this promotion.
 9. DISPUTES: The promoter's decision is final.`
 
+const TIERS = [
+  { value: 'starter', label: 'Starter — up to 500 entries/month', standard: '$129/mo', emerging: '$51/mo' },
+  { value: 'growth', label: 'Growth — up to 2,000 entries/month', standard: '$259/mo', emerging: '$103/mo' },
+  { value: 'professional', label: 'Professional — up to 5,000 entries/month', standard: '$454/mo', emerging: '$181/mo' },
+  { value: 'enterprise', label: 'Enterprise — up to 20,000 entries/month', standard: '$779/mo', emerging: '$311/mo' },
+  { value: 'custom', label: 'Custom — more than 20,000 entries/month', standard: 'Quote', emerging: 'Quote' },
+]
+
 interface Prize {
   position: string
   description: string
@@ -32,6 +40,7 @@ export default function LaunchPage() {
     companyName: '', contactName: '', email: '', phone: '',
     promoName: '', minSpend: '', currency: 'USD',
     startDate: '', endDate: '', drawDate: '',
+    entryBudgetTier: '',
     productKeywords: '', productBarcodes: [] as string[],
     termsConditions: TERMS, promoterPin: '',
     logo: null as File | null, emoji: '🛍', color: '#1D9E75',
@@ -51,11 +60,9 @@ export default function LaunchPage() {
     }
   }
 
-  // Prize management
   const addPrize = () => setPrizes(p => [...p, { position: `${p.length + 1}${ordinal(p.length + 1)} prize`, description: '' }])
-  const updatePrize = (i: number, field: keyof Prize, val: string) => {
+  const updatePrize = (i: number, field: keyof Prize, val: string) =>
     setPrizes(p => p.map((prize, n) => n === i ? { ...prize, [field]: val } : prize))
-  }
   const removePrize = (i: number) => setPrizes(p => p.filter((_, n) => n !== i))
 
   function ordinal(n: number) {
@@ -65,7 +72,6 @@ export default function LaunchPage() {
     return 'th'
   }
 
-  // Barcode management
   const addBarcode = () => set('productBarcodes', [...form.productBarcodes, ''])
   const setBarcode = (i: number, v: string) => {
     const b = [...form.productBarcodes]; b[i] = v; set('productBarcodes', b)
@@ -81,6 +87,8 @@ export default function LaunchPage() {
       return setError('Please fill in all required fields.')
     if (step === 2 && prizes.every(p => !p.description))
       return setError('Please add at least one prize.')
+    if (step === 2 && !form.entryBudgetTier)
+      return setError('Please select an entry budget tier.')
     if (step === 3 && (!form.promoterPin || form.promoterPin.length < 4))
       return setError('Please set a PIN of at least 4 characters.')
     setStep(s => s + 1)
@@ -106,6 +114,7 @@ export default function LaunchPage() {
     } finally { setSubmitting(false) }
   }
 
+  const selectedTier = TIERS.find(t => t.value === form.entryBudgetTier)
   const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', border: '1px solid #ccc', borderRadius: '8px', fontSize: '15px', boxSizing: 'border-box' }
   const lbl: React.CSSProperties = { display: 'block', fontWeight: 600, fontSize: '14px', marginBottom: '5px', color: '#333' }
   const fld: React.CSSProperties = { marginBottom: '18px' }
@@ -117,8 +126,8 @@ export default function LaunchPage() {
         <h1 style={{ fontSize: '22px', fontWeight: 700, margin: '12px 0 8px' }}>Promotion submitted!</h1>
         <p style={{ color: '#666', marginBottom: '16px' }}>Your reference:</p>
         <div style={{ background: '#f0fdf4', border: '2px solid #1D9E75', borderRadius: '8px', padding: '14px', fontSize: '20px', fontWeight: 700, color: '#1D9E75', letterSpacing: '2px', marginBottom: '16px' }}>{promoRef}</div>
-        <p style={{ color: '#666', fontSize: '14px', marginBottom: '6px' }}>Confirmation sent to <strong>{form.email}</strong></p>
-        <p style={{ color: '#666', fontSize: '14px', marginBottom: '28px' }}>Your PIN: <strong>{form.promoterPin}</strong> — save this to access your promoter portal.</p>
+        <p style={{ color: '#666', fontSize: '14px', marginBottom: '6px' }}>We will review your submission within 24 hours and send a confirmation and invoice to <strong>{form.email}</strong>.</p>
+        <p style={{ color: '#666', fontSize: '14px', marginBottom: '28px' }}>Your PIN: <strong>{form.promoterPin}</strong> — save this to access your promoter portal once your promotion goes live.</p>
         <a href="/promoter" style={{ display: 'block', background: '#1D9E75', color: 'white', padding: '13px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, marginBottom: '10px' }}>Go to Promoter Portal →</a>
         <a href="/" style={{ display: 'block', color: '#1D9E75', padding: '10px', textDecoration: 'none' }}>Back to home</a>
       </div>
@@ -137,7 +146,7 @@ export default function LaunchPage() {
 
         <div style={{ background: 'white', borderRadius: '16px', padding: '28px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
 
-          {/* STEP 1 — Business details */}
+          {/* STEP 1 */}
           {step === 1 && <>
             <h2 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '20px' }}>Your business details</h2>
             <div style={fld}><label style={lbl}>Company / brand name *</label><input style={inp} value={form.companyName} onChange={e => set('companyName', e.target.value)} placeholder="Your company name" /></div>
@@ -156,7 +165,7 @@ export default function LaunchPage() {
             </div>
           </>}
 
-          {/* STEP 2 — Promotion details */}
+          {/* STEP 2 */}
           {step === 2 && <>
             <h2 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '20px' }}>Promotion details</h2>
             <div style={fld}><label style={lbl}>Promotion name *</label><input style={inp} value={form.promoName} onChange={e => set('promoName', e.target.value)} placeholder="e.g. Win Big This Summer!" /></div>
@@ -174,21 +183,43 @@ export default function LaunchPage() {
             </div>
             <div style={fld}><label style={lbl}>Draw date *</label><input style={inp} type="date" value={form.drawDate} onChange={e => set('drawDate', e.target.value)} /></div>
 
-            {/* Individual prize panels */}
+            {/* Prize panels */}
             <div style={fld}>
               <label style={lbl}>Prizes *</label>
               {prizes.map((prize, i) => (
                 <div key={i} style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', marginBottom: '10px', border: '1px solid #e5e7eb' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <input value={prize.position} onChange={e => updatePrize(i, 'position', e.target.value)} style={{ ...inp, width: 'auto', flex: 1, fontWeight: 600, background: 'white', marginRight: '8px' }} placeholder="e.g. 1st prize" />
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                    <input value={prize.position} onChange={e => updatePrize(i, 'position', e.target.value)} style={{ ...inp, fontWeight: 600, background: 'white' }} placeholder="e.g. 1st prize" />
                     {prizes.length > 1 && (
-                      <button onClick={() => removePrize(i)} style={{ background: '#fee2e2', border: 'none', borderRadius: '6px', color: '#dc2626', cursor: 'pointer', fontWeight: 700, fontSize: '18px', width: '32px', height: '32px', flexShrink: 0 }}>×</button>
+                      <button onClick={() => removePrize(i)} style={{ width: '32px', height: '32px', background: '#fee2e2', border: 'none', borderRadius: '6px', color: '#dc2626', cursor: 'pointer', fontWeight: 700, fontSize: '18px', flexShrink: 0 }}>×</button>
                     )}
                   </div>
-                  <input value={prize.description} onChange={e => updatePrize(i, 'description', e.target.value)} style={{ ...inp, background: 'white' }} placeholder="Describe the prize, e.g. €500 cash, return flights, Samsung TV" />
+                  <input value={prize.description} onChange={e => updatePrize(i, 'description', e.target.value)} style={{ ...inp, background: 'white' }} placeholder="Describe the prize, e.g. $500 cash, return flights, Samsung TV" />
                 </div>
               ))}
               <button onClick={addPrize} style={{ padding: '8px 14px', background: '#f0fdf4', border: '1px solid #1D9E75', borderRadius: '8px', color: '#1D9E75', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>+ Add another prize</button>
+            </div>
+
+            {/* Entry budget tier */}
+            <div style={fld}>
+              <label style={lbl}>How many entries do you wish to budget for? *</label>
+              <p style={{ fontSize: '13px', color: '#888', marginBottom: '10px' }}>This sets your pricing tier. If you are unsure, start with Starter — you can discuss with us before going live.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {TIERS.map(tier => (
+                  <div key={tier.value} onClick={() => set('entryBudgetTier', tier.value)} style={{ border: `2px solid ${form.entryBudgetTier === tier.value ? '#1D9E75' : '#e5e7eb'}`, borderRadius: '10px', padding: '12px 16px', cursor: 'pointer', background: form.entryBudgetTier === tier.value ? '#f0fdf4' : 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '14px', color: '#111' }}>{tier.label}</div>
+                      <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>Standard: {tier.standard} · Emerging markets: {tier.emerging}</div>
+                    </div>
+                    {form.entryBudgetTier === tier.value && <div style={{ color: '#1D9E75', fontWeight: 700, fontSize: '18px', flexShrink: 0 }}>✓</div>}
+                  </div>
+                ))}
+              </div>
+              {selectedTier && (
+                <div style={{ marginTop: '12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#15803d' }}>
+                  First 500 entries included free. Additional entries charged at $10 per 1,000. Our team will confirm your exact pricing on review.
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '10px', marginBottom: '18px' }}>
@@ -197,11 +228,13 @@ export default function LaunchPage() {
                   {EMOJIS.map(e => <option key={e}>{e}</option>)}
                 </select>
               </div>
-              <div style={{ flex: 1 }}><label style={lbl}>Colour</label><input type="color" value={form.color} onChange={e => set('color', e.target.value)} style={{ height: '40px', width: '100%', borderRadius: '8px', border: '1px solid #ccc', cursor: 'pointer' }} /></div>
+              <div style={{ flex: 1 }}><label style={lbl}>Colour</label>
+                <input type="color" value={form.color} onChange={e => set('color', e.target.value)} style={{ height: '40px', width: '100%', borderRadius: '8px', border: '1px solid #ccc', cursor: 'pointer' }} />
+              </div>
             </div>
           </>}
 
-          {/* STEP 3 — Products & verification */}
+          {/* STEP 3 */}
           {step === 3 && <>
             <h2 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>Products &amp; verification</h2>
             <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>Help the AI know what to look for on receipts.</p>
@@ -228,7 +261,7 @@ export default function LaunchPage() {
             </div>
           </>}
 
-          {/* STEP 4 — Terms */}
+          {/* STEP 4 */}
           {step === 4 && <>
             <h2 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>Terms &amp; Conditions</h2>
             <p style={{ color: '#666', fontSize: '14px', marginBottom: '14px' }}>Edit the template below to match your promotion.</p>
