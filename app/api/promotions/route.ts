@@ -2,18 +2,29 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const SUPABASE_URL = 'https://qnpjawyeekhkzvrorqyv.supabase.co'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url)
+    const country = searchParams.get('country')
+
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!serviceKey) return NextResponse.json({ error: 'No service key', promotions: [] })
+
     const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(SUPABASE_URL, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('promotion_submissions')
       .select('*')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
+
+    // Filter by country if provided and not 'all'
+    if (country && country !== 'all') {
+      query = query.eq('country', country)
+    }
+
+    const { data, error } = await query
 
     if (error) return NextResponse.json({ error: error.message, promotions: [] })
     if (!data || data.length === 0) return NextResponse.json({ promotions: [] })
@@ -50,14 +61,13 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData()
 
-    // Read all fields safely as strings
     const companyName = formData.get('companyName') as string || ''
     const contactName = formData.get('contactName') as string || ''
     const email = formData.get('email') as string || ''
     const phone = formData.get('phone') as string || ''
     const promoName = formData.get('promoName') as string || ''
     const minSpend = parseFloat(formData.get('minSpend') as string || '0') || 0
-    const currency = formData.get('currency') as string || 'UGX'
+    const currency = formData.get('currency') as string || 'USD'
     const startDate = formData.get('startDate') as string || null
     const endDate = formData.get('endDate') as string || null
     const drawDate = formData.get('drawDate') as string || null
@@ -67,27 +77,25 @@ export async function POST(req: NextRequest) {
     const promoterPin = formData.get('promoterPin') as string || ''
     const emoji = formData.get('emoji') as string || '🛍'
     const color = formData.get('color') as string || '#1D9E75'
+    const country = formData.get('country') as string || ''
+    const entryBudgetTier = formData.get('entryBudgetTier') as string || ''
     const logoFile = formData.get('logo') as File | null
 
-    // Parse barcodes safely
     let productBarcodes: string[] = []
     try {
       const barcodesRaw = formData.get('productBarcodes') as string
       if (barcodesRaw) productBarcodes = JSON.parse(barcodesRaw)
     } catch { productBarcodes = [] }
 
-    // Parse keywords into array
     const keywordsArray = productKeywords
       ? productKeywords.split(',').map((k: string) => k.trim()).filter(Boolean)
       : []
 
-    // Generate ref
     const ref = 'PR-' + Math.random().toString(36).substring(2, 8).toUpperCase()
 
     const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(SUPABASE_URL, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 
-    // Upload logo if provided
     let logoUrl: string | null = null
     if (logoFile && logoFile.size > 0) {
       try {
@@ -125,6 +133,8 @@ export async function POST(req: NextRequest) {
         promoter_pin: promoterPin,
         emoji,
         color,
+        country: country || null,
+        entry_budget_tier: entryBudgetTier || null,
         logo_url: logoUrl,
         ref,
         status: 'pending',
