@@ -15,6 +15,38 @@ const TERMS = `TERMS AND CONDITIONS
 8. DATA: Entry data used only to administer this promotion.
 9. DISPUTES: The promoter's decision is final.`
 
+const COUNTRIES = [
+  { code: 'AU', name: 'Australia', flag: '🇦🇺' },
+  { code: 'BD', name: 'Bangladesh', flag: '🇧🇩' },
+  { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
+  { code: 'CA', name: 'Canada', flag: '🇨🇦' },
+  { code: 'CI', name: 'Côte d\'Ivoire', flag: '🇨🇮' },
+  { code: 'CM', name: 'Cameroon', flag: '🇨🇲' },
+  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
+  { code: 'EG', name: 'Egypt', flag: '🇪🇬' },
+  { code: 'ET', name: 'Ethiopia', flag: '🇪🇹' },
+  { code: 'FR', name: 'France', flag: '🇫🇷' },
+  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'GH', name: 'Ghana', flag: '🇬🇭' },
+  { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
+  { code: 'IN', name: 'India', flag: '🇮🇳' },
+  { code: 'KE', name: 'Kenya', flag: '🇰🇪' },
+  { code: 'MA', name: 'Morocco', flag: '🇲🇦' },
+  { code: 'MX', name: 'Mexico', flag: '🇲🇽' },
+  { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
+  { code: 'NZ', name: 'New Zealand', flag: '🇳🇿' },
+  { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
+  { code: 'PK', name: 'Pakistan', flag: '🇵🇰' },
+  { code: 'RW', name: 'Rwanda', flag: '🇷🇼' },
+  { code: 'SN', name: 'Senegal', flag: '🇸🇳' },
+  { code: 'TZ', name: 'Tanzania', flag: '🇹🇿' },
+  { code: 'UG', name: 'Uganda', flag: '🇺🇬' },
+  { code: 'US', name: 'United States', flag: '🇺🇸' },
+  { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
+  { code: 'ZM', name: 'Zambia', flag: '🇿🇲' },
+  { code: 'ZW', name: 'Zimbabwe', flag: '🇿🇼' },
+]
+
 const TIERS = [
   { value: 'starter', label: 'Starter — up to 500 entries/month', standard: '$129/mo', emerging: '$51/mo' },
   { value: 'growth', label: 'Growth — up to 2,000 entries/month', standard: '$259/mo', emerging: '$103/mo' },
@@ -23,10 +55,7 @@ const TIERS = [
   { value: 'custom', label: 'Custom — more than 20,000 entries/month', standard: 'Quote', emerging: 'Quote' },
 ]
 
-interface Prize {
-  position: string
-  description: string
-}
+interface Prize { position: string; description: string }
 
 export default function LaunchPage() {
   const [step, setStep] = useState(1)
@@ -36,8 +65,11 @@ export default function LaunchPage() {
   const [error, setError] = useState('')
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [prizes, setPrizes] = useState<Prize[]>([{ position: '1st prize', description: '' }])
+  const [countrySearch, setCountrySearch] = useState('')
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false)
   const [form, setForm] = useState({
     companyName: '', contactName: '', email: '', phone: '',
+    country: '', countryDisplay: '',
     promoName: '', minSpend: '', currency: 'USD',
     startDate: '', endDate: '', drawDate: '',
     entryBudgetTier: '',
@@ -55,10 +87,18 @@ export default function LaunchPage() {
       const reader = new FileReader()
       reader.onload = e => setLogoPreview(e.target?.result as string)
       reader.readAsDataURL(file)
-    } else {
-      setLogoPreview(null)
-    }
+    } else { setLogoPreview(null) }
   }
+
+  const selectCountry = (code: string, name: string, flag: string) => {
+    setForm(p => ({ ...p, country: code, countryDisplay: `${flag} ${name}` }))
+    setCountrySearch(`${flag} ${name}`)
+    setShowCountryDropdown(false)
+  }
+
+  const filteredCountries = COUNTRIES.filter(c =>
+    c.name.toLowerCase().includes(countrySearch.replace(/[^\w\s]/g, '').trim().toLowerCase())
+  )
 
   const addPrize = () => setPrizes(p => [...p, { position: `${p.length + 1}${ordinal(p.length + 1)} prize`, description: '' }])
   const updatePrize = (i: number, field: keyof Prize, val: string) =>
@@ -66,10 +106,7 @@ export default function LaunchPage() {
   const removePrize = (i: number) => setPrizes(p => p.filter((_, n) => n !== i))
 
   function ordinal(n: number) {
-    if (n === 1) return 'st'
-    if (n === 2) return 'nd'
-    if (n === 3) return 'rd'
-    return 'th'
+    if (n === 1) return 'st'; if (n === 2) return 'nd'; if (n === 3) return 'rd'; return 'th'
   }
 
   const addBarcode = () => set('productBarcodes', [...form.productBarcodes, ''])
@@ -83,6 +120,8 @@ export default function LaunchPage() {
     setError('')
     if (step === 1 && (!form.companyName || !form.contactName || !form.email || !form.phone))
       return setError('Please fill in all required fields.')
+    if (step === 1 && !form.country)
+      return setError('Please select your country.')
     if (step === 2 && (!form.promoName || !form.minSpend || !form.startDate || !form.endDate || !form.drawDate))
       return setError('Please fill in all required fields.')
     if (step === 2 && prizes.every(p => !p.description))
@@ -102,6 +141,7 @@ export default function LaunchPage() {
       Object.entries(form).forEach(([k, v]) => {
         if (k === 'logo' && v instanceof File) fd.append('logo', v)
         else if (k === 'productBarcodes') fd.append('productBarcodes', JSON.stringify(v))
+        else if (k === 'countryDisplay') return
         else if (v !== null) fd.append(k, String(v))
       })
       fd.append('prizes', prizesText)
@@ -153,6 +193,32 @@ export default function LaunchPage() {
             <div style={fld}><label style={lbl}>Contact person name *</label><input style={inp} value={form.contactName} onChange={e => set('contactName', e.target.value)} placeholder="Full name" /></div>
             <div style={fld}><label style={lbl}>Email address *</label><input style={inp} type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="your@email.com" /></div>
             <div style={fld}><label style={lbl}>Phone number *</label><input style={inp} type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+1 234 567 8900" /></div>
+
+            {/* Country selector */}
+            <div style={{ ...fld, position: 'relative' }}>
+              <label style={lbl}>Country *</label>
+              <p style={{ fontSize: '13px', color: '#888', marginBottom: '6px' }}>The country where your promotion will run</p>
+              <input
+                value={countrySearch}
+                onChange={e => { setCountrySearch(e.target.value); setShowCountryDropdown(true) }}
+                onFocus={() => setShowCountryDropdown(true)}
+                placeholder="🔍 Type or select your country..."
+                style={inp}
+              />
+              {showCountryDropdown && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: '10px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', zIndex: 100, maxHeight: '200px', overflowY: 'auto', border: '1px solid #e5e7eb', marginTop: '4px' }}>
+                  {filteredCountries.map(country => (
+                    <div key={country.code} onClick={() => selectCountry(country.code, country.name, country.flag)} style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #f9fafb', background: form.country === country.code ? '#f0fdf4' : 'white', fontSize: '14px' }}>
+                      <span>{country.flag}</span>
+                      <span style={{ fontWeight: form.country === country.code ? 700 : 400 }}>{country.name}</span>
+                      {form.country === country.code && <span style={{ marginLeft: 'auto', color: '#1D9E75' }}>✓</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {showCountryDropdown && <div onClick={() => setShowCountryDropdown(false)} style={{ position: 'fixed', inset: 0, zIndex: 99 }} />}
+            </div>
+
             <div style={fld}>
               <label style={lbl}>Logo (optional)</label>
               <input type="file" accept="image/*" onChange={e => handleLogo(e.target.files?.[0] || null)} style={{ fontSize: '14px', marginBottom: '10px' }} />
@@ -183,16 +249,13 @@ export default function LaunchPage() {
             </div>
             <div style={fld}><label style={lbl}>Draw date *</label><input style={inp} type="date" value={form.drawDate} onChange={e => set('drawDate', e.target.value)} /></div>
 
-            {/* Prize panels */}
             <div style={fld}>
               <label style={lbl}>Prizes *</label>
               {prizes.map((prize, i) => (
                 <div key={i} style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', marginBottom: '10px', border: '1px solid #e5e7eb' }}>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
                     <input value={prize.position} onChange={e => updatePrize(i, 'position', e.target.value)} style={{ ...inp, fontWeight: 600, background: 'white' }} placeholder="e.g. 1st prize" />
-                    {prizes.length > 1 && (
-                      <button onClick={() => removePrize(i)} style={{ width: '32px', height: '32px', background: '#fee2e2', border: 'none', borderRadius: '6px', color: '#dc2626', cursor: 'pointer', fontWeight: 700, fontSize: '18px', flexShrink: 0 }}>×</button>
-                    )}
+                    {prizes.length > 1 && <button onClick={() => removePrize(i)} style={{ width: '32px', height: '32px', background: '#fee2e2', border: 'none', borderRadius: '6px', color: '#dc2626', cursor: 'pointer', fontWeight: 700, fontSize: '18px', flexShrink: 0 }}>×</button>}
                   </div>
                   <input value={prize.description} onChange={e => updatePrize(i, 'description', e.target.value)} style={{ ...inp, background: 'white' }} placeholder="Describe the prize, e.g. $500 cash, return flights, Samsung TV" />
                 </div>
@@ -200,7 +263,6 @@ export default function LaunchPage() {
               <button onClick={addPrize} style={{ padding: '8px 14px', background: '#f0fdf4', border: '1px solid #1D9E75', borderRadius: '8px', color: '#1D9E75', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>+ Add another prize</button>
             </div>
 
-            {/* Entry budget tier */}
             <div style={fld}>
               <label style={lbl}>How many entries do you wish to budget for? *</label>
               <p style={{ fontSize: '13px', color: '#888', marginBottom: '10px' }}>This sets your pricing tier. If you are unsure, start with Starter — you can discuss with us before going live.</p>
@@ -209,7 +271,7 @@ export default function LaunchPage() {
                   <div key={tier.value} onClick={() => set('entryBudgetTier', tier.value)} style={{ border: `2px solid ${form.entryBudgetTier === tier.value ? '#1D9E75' : '#e5e7eb'}`, borderRadius: '10px', padding: '12px 16px', cursor: 'pointer', background: form.entryBudgetTier === tier.value ? '#f0fdf4' : 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: '14px', color: '#111' }}>{tier.label}</div>
-                      <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>Standard: {tier.standard} · Emerging markets: {tier.emerging}</div>
+                      <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>Standard: {tier.standard} · Emerging: {tier.emerging}</div>
                     </div>
                     {form.entryBudgetTier === tier.value && <div style={{ color: '#1D9E75', fontWeight: 700, fontSize: '18px', flexShrink: 0 }}>✓</div>}
                   </div>
@@ -217,7 +279,7 @@ export default function LaunchPage() {
               </div>
               {selectedTier && (
                 <div style={{ marginTop: '12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#15803d' }}>
-                  First 500 entries included free. Additional entries charged at $10 per 1,000. Our team will confirm your exact pricing on review.
+                  First 500 entries included free. Additional entries at $10 per 1,000. Our team will confirm your exact pricing on review.
                 </div>
               )}
             </div>
