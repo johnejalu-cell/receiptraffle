@@ -15,9 +15,12 @@ interface Promotion {
   emoji: string
   color: string
   ref: string
+  slug?: string
   product_keywords: string[]
   product_barcodes: string[]
   terms_conditions: string
+  grand_draw_id?: string
+  grand_draw_name?: string
 }
 
 interface Entry {
@@ -81,9 +84,7 @@ export default function PromoterPage() {
 
   const loadEntries = async (promo: Promotion) => {
     setSelectedPromo(promo)
-    setWinner(null)
-    setDrawError('')
-    setShowEdit(false)
+    setWinner(null); setDrawError(''); setShowEdit(false)
     setEntriesLoading(true)
     try {
       const res = await fetch('/api/promoter/entries', {
@@ -109,8 +110,7 @@ export default function PromoterPage() {
       terms_conditions: selectedPromo.terms_conditions,
     })
     setEditBarcodes(selectedPromo.product_barcodes?.length ? selectedPromo.product_barcodes : [])
-    setShowEdit(true)
-    setSaveMsg('')
+    setShowEdit(true); setSaveMsg('')
   }
 
   const saveEdit = async () => {
@@ -132,32 +132,26 @@ export default function PromoterPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      // Update local state
       const updated = { ...selectedPromo, ...editForm, product_keywords: keywordsArray, product_barcodes: editBarcodes.filter(Boolean) }
       setSelectedPromo(updated)
       setPromotions(prev => prev.map(p => p.id === updated.id ? updated : p))
-      setSaveMsg('Saved successfully!')
+      setSaveMsg('success')
       setTimeout(() => setShowEdit(false), 1200)
     } catch (e: unknown) {
-      setSaveMsg(e instanceof Error ? e.message : 'Save failed')
+      setSaveMsg('error:' + (e instanceof Error ? e.message : 'Save failed'))
     } finally { setSaving(false) }
   }
 
   const downloadCSV = () => {
     if (!entries.length) return
     const headers = ['Ticket', 'Name', 'Phone', 'Email', 'Amount', 'Currency', 'Retailer', 'Date', 'Status']
-    const rows = entries.map(e => [
-      e.ticket_number, e.customer_name, e.customer_phone, e.customer_email || '',
-      e.amount, e.currency, e.retailer || '', e.receipt_date || '', e.verification_status,
-    ])
+    const rows = entries.map(e => [e.ticket_number, e.customer_name, e.customer_phone, e.customer_email || '', e.amount, e.currency, e.retailer || '', e.receipt_date || '', e.verification_status])
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
+    const a = document.createElement('a'); a.href = url
     a.download = `${selectedPromo?.promo_name || 'entries'}-entries.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    a.click(); URL.revokeObjectURL(url)
   }
 
   const runDraw = async () => {
@@ -192,22 +186,14 @@ export default function PromoterPage() {
           <h1 style={{ fontSize: '22px', fontWeight: 700, margin: '8px 0 4px' }}>Promoter Portal</h1>
           <p style={{ color: '#666', fontSize: '14px' }}>Sign in with the email and PIN you set when launching your promotion.</p>
         </div>
-        <div style={{ marginBottom: '16px' }}>
-          <label style={lbl}>Email address</label>
-          <input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" />
-        </div>
-        <div style={{ marginBottom: '20px' }}>
-          <label style={lbl}>Your PIN</label>
-          <input style={inp} type="password" value={pin} onChange={e => setPin(e.target.value)} placeholder="Enter your PIN" onKeyDown={e => e.key === 'Enter' && login()} />
-        </div>
+        <div style={{ marginBottom: '16px' }}><label style={lbl}>Email address</label><input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" /></div>
+        <div style={{ marginBottom: '20px' }}><label style={lbl}>Your PIN</label><input style={inp} type="password" value={pin} onChange={e => setPin(e.target.value)} onKeyDown={e => e.key === 'Enter' && login()} /></div>
         {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '12px', color: '#dc2626', fontSize: '14px', marginBottom: '16px' }}>{error}</div>}
         <button onClick={login} disabled={loading} style={{ width: '100%', padding: '13px', background: loading ? '#9ca3af' : '#1D9E75', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 700, fontSize: '15px', cursor: loading ? 'not-allowed' : 'pointer' }}>
           {loading ? 'Signing in...' : 'Access my promotions →'}
         </button>
-        <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: '#888' }}>Forgot your PIN? Contact us and we will reset it for you.</p>
-        <div style={{ textAlign: 'center', marginTop: '16px' }}>
-          <a href="/" style={{ color: '#1D9E75', fontSize: '14px', textDecoration: 'none' }}>← Back to home</a>
-        </div>
+        <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: '#888' }}>Forgot your PIN? Contact us to reset it.</p>
+        <div style={{ textAlign: 'center', marginTop: '16px' }}><a href="/" style={{ color: '#1D9E75', fontSize: '14px', textDecoration: 'none' }}>← Back to home</a></div>
       </div>
     </div>
   )
@@ -224,7 +210,10 @@ export default function PromoterPage() {
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: '16px' }}>{p.promo_name}</div>
               <div style={{ color: '#666', fontSize: '13px' }}>{p.company_name} · Draw: {p.draw_date ? new Date(p.draw_date).toLocaleDateString() : 'TBC'}</div>
-              <span style={{ display: 'inline-block', marginTop: '6px', padding: '2px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: p.status === 'active' ? '#dcfce7' : '#fef9c3', color: p.status === 'active' ? '#16a34a' : '#92400e' }}>{p.status}</span>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
+                <span style={{ padding: '2px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: p.status === 'active' ? '#dcfce7' : '#fef9c3', color: p.status === 'active' ? '#16a34a' : '#92400e' }}>{p.status}</span>
+                {p.grand_draw_id && <span style={{ padding: '2px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: '#ede9fe', color: '#6d28d9' }}>🏆 Grand Draw</span>}
+              </div>
             </div>
             <div style={{ color: '#1D9E75', fontWeight: 600 }}>Manage →</div>
           </div>
@@ -242,44 +231,28 @@ export default function PromoterPage() {
         <h1 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '4px' }}>Edit promotion</h1>
         <p style={{ color: '#888', fontSize: '13px', marginBottom: '24px' }}>Minimum spend and currency cannot be changed once a promotion is live.</p>
         <div style={{ background: 'white', borderRadius: '16px', padding: '28px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-          <div style={{ marginBottom: '18px' }}>
-            <label style={lbl}>Promotion name</label>
-            <input style={inp} value={editForm.promo_name || ''} onChange={e => setEditForm(f => ({ ...f, promo_name: e.target.value }))} />
-          </div>
+          <div style={{ marginBottom: '18px' }}><label style={lbl}>Promotion name</label><input style={inp} value={editForm.promo_name || ''} onChange={e => setEditForm(f => ({ ...f, promo_name: e.target.value }))} /></div>
           <div style={{ display: 'flex', gap: '12px', marginBottom: '18px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={lbl}>End date</label>
-              <input style={inp} type="date" value={editForm.end_date || ''} onChange={e => setEditForm(f => ({ ...f, end_date: e.target.value }))} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={lbl}>Draw date</label>
-              <input style={inp} type="date" value={editForm.draw_date || ''} onChange={e => setEditForm(f => ({ ...f, draw_date: e.target.value }))} />
-            </div>
+            <div style={{ flex: 1 }}><label style={lbl}>End date</label><input style={inp} type="date" value={editForm.end_date || ''} onChange={e => setEditForm(f => ({ ...f, end_date: e.target.value }))} /></div>
+            <div style={{ flex: 1 }}><label style={lbl}>Draw date</label><input style={inp} type="date" value={editForm.draw_date || ''} onChange={e => setEditForm(f => ({ ...f, draw_date: e.target.value }))} /></div>
           </div>
-          <div style={{ marginBottom: '18px' }}>
-            <label style={lbl}>Prizes</label>
-            <textarea style={{ ...inp, minHeight: '80px', resize: 'vertical' }} value={editForm.prizes || ''} onChange={e => setEditForm(f => ({ ...f, prizes: e.target.value }))} />
-          </div>
+          <div style={{ marginBottom: '18px' }}><label style={lbl}>Prizes</label><textarea style={{ ...inp, minHeight: '80px', resize: 'vertical' }} value={editForm.prizes || ''} onChange={e => setEditForm(f => ({ ...f, prizes: e.target.value }))} /></div>
           <div style={{ marginBottom: '18px' }}>
             <label style={lbl}>Product keywords</label>
-            <p style={{ fontSize: '13px', color: '#888', marginBottom: '6px' }}>Comma-separated</p>
-            <input style={inp} value={Array.isArray(editForm.product_keywords) ? editForm.product_keywords.join(', ') : (editForm.product_keywords || '')} onChange={e => setEditForm(f => ({ ...f, product_keywords: e.target.value.split(',').map(k => k.trim()).filter(Boolean) }))} placeholder="e.g. Mukwano, cooking oil" />
+            <input style={inp} value={Array.isArray(editForm.product_keywords) ? editForm.product_keywords.join(', ') : (editForm.product_keywords || '')} onChange={e => setEditForm(f => ({ ...f, product_keywords: e.target.value.split(',').map(k => k.trim()).filter(Boolean) }))} />
           </div>
           <div style={{ marginBottom: '18px' }}>
             <label style={lbl}>Product barcodes</label>
             {editBarcodes.map((bc, i) => (
               <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
-                <input value={bc} onChange={e => { const b = [...editBarcodes]; b[i] = e.target.value.replace(/[^0-9]/g, ''); setEditBarcodes(b) }} style={{ flex: 1, padding: '10px 12px', border: '1px solid #ccc', borderRadius: '8px', fontSize: '15px' }} placeholder="e.g. 5901234123457" maxLength={20} />
+                <input value={bc} onChange={e => { const b = [...editBarcodes]; b[i] = e.target.value.replace(/[^0-9]/g, ''); setEditBarcodes(b) }} style={{ flex: 1, padding: '10px 12px', border: '1px solid #ccc', borderRadius: '8px', fontSize: '15px' }} maxLength={20} />
                 <button onClick={() => setEditBarcodes(editBarcodes.filter((_, n) => n !== i))} style={{ width: '32px', height: '32px', background: '#fee2e2', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#dc2626', fontWeight: 700, fontSize: '18px' }}>×</button>
               </div>
             ))}
             <button onClick={() => setEditBarcodes([...editBarcodes, ''])} style={{ marginTop: '6px', padding: '8px 14px', background: '#f0fdf4', border: '1px solid #1D9E75', borderRadius: '8px', color: '#1D9E75', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>+ Add barcode</button>
           </div>
-          <div style={{ marginBottom: '18px' }}>
-            <label style={lbl}>Terms &amp; Conditions</label>
-            <textarea style={{ ...inp, minHeight: '200px', fontFamily: 'monospace', fontSize: '13px', resize: 'vertical' }} value={editForm.terms_conditions || ''} onChange={e => setEditForm(f => ({ ...f, terms_conditions: e.target.value }))} />
-          </div>
-          {saveMsg && <div style={{ padding: '12px', borderRadius: '8px', marginBottom: '16px', background: saveMsg.includes('success') ? '#f0fdf4' : '#fef2f2', color: saveMsg.includes('success') ? '#16a34a' : '#dc2626', fontSize: '14px', fontWeight: 600 }}>{saveMsg}</div>}
+          <div style={{ marginBottom: '18px' }}><label style={lbl}>Terms &amp; Conditions</label><textarea style={{ ...inp, minHeight: '200px', fontFamily: 'monospace', fontSize: '13px', resize: 'vertical' }} value={editForm.terms_conditions || ''} onChange={e => setEditForm(f => ({ ...f, terms_conditions: e.target.value }))} /></div>
+          {saveMsg && <div style={{ padding: '12px', borderRadius: '8px', marginBottom: '16px', background: saveMsg === 'success' ? '#f0fdf4' : '#fef2f2', color: saveMsg === 'success' ? '#16a34a' : '#dc2626', fontSize: '14px', fontWeight: 600 }}>{saveMsg === 'success' ? 'Saved successfully!' : saveMsg.replace('error:', '')}</div>}
           <button onClick={saveEdit} disabled={saving} style={{ width: '100%', padding: '13px', background: saving ? '#9ca3af' : '#1D9E75', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 700, fontSize: '15px', cursor: saving ? 'not-allowed' : 'pointer' }}>
             {saving ? 'Saving...' : 'Save changes →'}
           </button>
@@ -292,10 +265,10 @@ export default function PromoterPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', padding: '24px' }}>
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+
+        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
-          {promotions.length > 1 && (
-            <button onClick={() => setSelectedPromo(null)} style={{ background: 'none', border: 'none', color: '#1D9E75', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>← Back</button>
-          )}
+          {promotions.length > 1 && <button onClick={() => setSelectedPromo(null)} style={{ background: 'none', border: 'none', color: '#1D9E75', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>← Back</button>}
           <div style={{ fontSize: '32px' }}>{selectedPromo.emoji || '🛍'}</div>
           <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>{selectedPromo.promo_name}</h1>
@@ -304,6 +277,31 @@ export default function PromoterPage() {
           <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: 600, background: selectedPromo.status === 'active' ? '#dcfce7' : '#fef9c3', color: selectedPromo.status === 'active' ? '#16a34a' : '#92400e' }}>{selectedPromo.status}</span>
         </div>
 
+        {/* Grand draw badge */}
+        {selectedPromo.grand_draw_id && (
+          <div style={{ background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)', border: '1px solid #c4b5fd', borderRadius: '12px', padding: '14px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '24px' }}>🏆</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '14px', color: '#5b21b6' }}>Entered into Grand Draw</div>
+              <div style={{ fontSize: '13px', color: '#6d28d9' }}>
+                {selectedPromo.grand_draw_name || 'Grand Draw'} — every verified entry from this promotion also earns a grand draw ticket.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Microsite link */}
+        {selectedPromo.slug && (
+          <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '13px', color: '#15803d' }}>🔗 Your promotion microsite</div>
+              <div style={{ fontSize: '12px', color: '#166534' }}>receiptraffle.com/p/{selectedPromo.slug}</div>
+            </div>
+            <a href={`/p/${selectedPromo.slug}`} target="_blank" rel="noreferrer" style={{ background: '#1D9E75', color: 'white', padding: '8px 14px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '12px', whiteSpace: 'nowrap' }}>View page →</a>
+          </div>
+        )}
+
+        {/* Stats */}
         <div style={{ display: 'flex', gap: '12px', margin: '20px 0', flexWrap: 'wrap' }}>
           {[{ label: 'Total entries', value: entries.length, color: '#1D9E75' }, { label: 'Approved', value: approvedCount, color: '#16a34a' }, { label: 'Under review', value: reviewCount, color: '#d97706' }].map(s => (
             <div key={s.label} style={{ flex: 1, minWidth: '90px', background: 'white', borderRadius: '12px', padding: '16px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
@@ -313,16 +311,13 @@ export default function PromoterPage() {
           ))}
         </div>
 
+        {/* Action buttons */}
         <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
-          <button onClick={downloadCSV} disabled={!entries.length} style={{ padding: '11px 18px', background: entries.length ? '#1D9E75' : '#e5e7eb', border: 'none', borderRadius: '8px', color: entries.length ? 'white' : '#9ca3af', fontWeight: 600, fontSize: '14px', cursor: entries.length ? 'pointer' : 'not-allowed' }}>
-            ⬇ Download CSV
-          </button>
+          <button onClick={downloadCSV} disabled={!entries.length} style={{ padding: '11px 18px', background: entries.length ? '#1D9E75' : '#e5e7eb', border: 'none', borderRadius: '8px', color: entries.length ? 'white' : '#9ca3af', fontWeight: 600, fontSize: '14px', cursor: entries.length ? 'pointer' : 'not-allowed' }}>⬇ Download CSV</button>
           <button onClick={runDraw} disabled={drawLoading || approvedCount === 0} style={{ padding: '11px 18px', background: approvedCount > 0 ? '#7c3aed' : '#e5e7eb', border: 'none', borderRadius: '8px', color: approvedCount > 0 ? 'white' : '#9ca3af', fontWeight: 600, fontSize: '14px', cursor: approvedCount > 0 ? 'pointer' : 'not-allowed' }}>
             {drawLoading ? 'Drawing...' : '🎰 Run prize draw'}
           </button>
-          <button onClick={openEdit} style={{ padding: '11px 18px', background: '#f3f4f6', border: 'none', borderRadius: '8px', color: '#333', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
-            ✏️ Edit promotion
-          </button>
+          <button onClick={openEdit} style={{ padding: '11px 18px', background: '#f3f4f6', border: 'none', borderRadius: '8px', color: '#333', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>✏️ Edit promotion</button>
         </div>
 
         {drawError && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '12px', color: '#dc2626', fontSize: '14px', marginBottom: '16px' }}>{drawError}</div>}
@@ -338,6 +333,7 @@ export default function PromoterPage() {
           </div>
         )}
 
+        {/* Entries table */}
         <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', fontWeight: 700, fontSize: '15px' }}>
             Entries {entriesLoading ? '(loading...)' : `(${entries.length})`}
