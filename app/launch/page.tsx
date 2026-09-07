@@ -62,14 +62,17 @@ export default function LaunchPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [promoRef, setPromoRef] = useState('')
+  const [promoSlug, setPromoSlug] = useState('')
   const [error, setError] = useState('')
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [prizes, setPrizes] = useState<Prize[]>([{ position: '1st prize', description: '' }])
   const [countrySearch, setCountrySearch] = useState('')
   const [showCountryDropdown, setShowCountryDropdown] = useState(false)
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null)
+  const [checkingSlug, setCheckingSlug] = useState(false)
   const [form, setForm] = useState({
     companyName: '', contactName: '', email: '', phone: '',
-    country: '', countryDisplay: '',
+    country: '', countryDisplay: '', slug: '',
     promoName: '', minSpend: '', currency: 'USD',
     startDate: '', endDate: '', drawDate: '',
     entryBudgetTier: '',
@@ -100,6 +103,22 @@ export default function LaunchPage() {
     c.name.toLowerCase().includes(countrySearch.replace(/[^\w\s]/g, '').trim().toLowerCase())
   )
 
+  const handleSlugChange = (val: string) => {
+    const clean = val.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/--+/g, '-')
+    set('slug', clean)
+    setSlugAvailable(null)
+  }
+
+  const checkSlug = async () => {
+    if (!form.slug || form.slug.length < 3) return
+    setCheckingSlug(true)
+    try {
+      const res = await fetch(`/api/promotions/slug?slug=${form.slug}`)
+      setSlugAvailable(res.status === 404)
+    } catch { setSlugAvailable(null) }
+    finally { setCheckingSlug(false) }
+  }
+
   const addPrize = () => setPrizes(p => [...p, { position: `${p.length + 1}${ordinal(p.length + 1)} prize`, description: '' }])
   const updatePrize = (i: number, field: keyof Prize, val: string) =>
     setPrizes(p => p.map((prize, n) => n === i ? { ...prize, [field]: val } : prize))
@@ -118,16 +137,19 @@ export default function LaunchPage() {
 
   const next = () => {
     setError('')
-    if (step === 1 && (!form.companyName || !form.contactName || !form.email || !form.phone))
-      return setError('Please fill in all required fields.')
-    if (step === 1 && !form.country)
-      return setError('Please select your country.')
-    if (step === 2 && (!form.promoName || !form.minSpend || !form.startDate || !form.endDate || !form.drawDate))
-      return setError('Please fill in all required fields.')
-    if (step === 2 && prizes.every(p => !p.description))
-      return setError('Please add at least one prize.')
-    if (step === 2 && !form.entryBudgetTier)
-      return setError('Please select an entry budget tier.')
+    if (step === 1) {
+      if (!form.companyName || !form.contactName || !form.email || !form.phone)
+        return setError('Please fill in all required fields.')
+      if (!form.country) return setError('Please select your country.')
+      if (!form.slug || form.slug.length < 3) return setError('Please enter a page URL (minimum 3 characters).')
+      if (slugAvailable === false) return setError('That URL is already taken. Please choose another.')
+    }
+    if (step === 2) {
+      if (!form.promoName || !form.minSpend || !form.startDate || !form.endDate || !form.drawDate)
+        return setError('Please fill in all required fields.')
+      if (prizes.every(p => !p.description)) return setError('Please add at least one prize.')
+      if (!form.entryBudgetTier) return setError('Please select an entry budget tier.')
+    }
     if (step === 3 && (!form.promoterPin || form.promoterPin.length < 4))
       return setError('Please set a PIN of at least 4 characters.')
     setStep(s => s + 1)
@@ -148,26 +170,32 @@ export default function LaunchPage() {
       const res = await fetch('/api/promotions', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Submission failed')
-      setPromoRef(data.ref); setSubmitted(true)
+      setPromoRef(data.ref)
+      setPromoSlug(form.slug)
+      setSubmitted(true)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Something went wrong.')
     } finally { setSubmitting(false) }
   }
 
-  const selectedTier = TIERS.find(t => t.value === form.entryBudgetTier)
   const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', border: '1px solid #ccc', borderRadius: '8px', fontSize: '15px', boxSizing: 'border-box' }
   const lbl: React.CSSProperties = { display: 'block', fontWeight: 600, fontSize: '14px', marginBottom: '5px', color: '#333' }
   const fld: React.CSSProperties = { marginBottom: '18px' }
 
   if (submitted) return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-      <div style={{ background: 'white', borderRadius: '16px', padding: '40px', maxWidth: '440px', width: '100%', textAlign: 'center', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
+      <div style={{ background: 'white', borderRadius: '16px', padding: '40px', maxWidth: '480px', width: '100%', textAlign: 'center', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
         <div style={{ fontSize: '48px' }}>🎉</div>
         <h1 style={{ fontSize: '22px', fontWeight: 700, margin: '12px 0 8px' }}>Promotion submitted!</h1>
         <p style={{ color: '#666', marginBottom: '16px' }}>Your reference:</p>
-        <div style={{ background: '#f0fdf4', border: '2px solid #1D9E75', borderRadius: '8px', padding: '14px', fontSize: '20px', fontWeight: 700, color: '#1D9E75', letterSpacing: '2px', marginBottom: '16px' }}>{promoRef}</div>
-        <p style={{ color: '#666', fontSize: '14px', marginBottom: '6px' }}>We will review your submission within 24 hours and send a confirmation and invoice to <strong>{form.email}</strong>.</p>
-        <p style={{ color: '#666', fontSize: '14px', marginBottom: '28px' }}>Your PIN: <strong>{form.promoterPin}</strong> — save this to access your promoter portal once your promotion goes live.</p>
+        <div style={{ background: '#f0fdf4', border: '2px solid #1D9E75', borderRadius: '8px', padding: '14px', fontSize: '20px', fontWeight: 700, color: '#1D9E75', letterSpacing: '2px', marginBottom: '20px' }}>{promoRef}</div>
+        <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', marginBottom: '16px', textAlign: 'left' }}>
+          <div style={{ fontSize: '13px', color: '#888', marginBottom: '4px', fontWeight: 600 }}>YOUR PROMOTION MICROSITE (live once approved)</div>
+          <div style={{ fontSize: '15px', color: '#1D9E75', fontWeight: 700 }}>receiptraffle.com/p/{promoSlug}</div>
+          <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>Share this link with your customers</div>
+        </div>
+        <p style={{ color: '#666', fontSize: '14px', marginBottom: '6px' }}>We will review within 24 hours and send confirmation to <strong>{form.email}</strong>.</p>
+        <p style={{ color: '#666', fontSize: '14px', marginBottom: '28px' }}>Your PIN: <strong>{form.promoterPin}</strong> — save this for your promoter portal.</p>
         <a href="/promoter" style={{ display: 'block', background: '#1D9E75', color: 'white', padding: '13px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, marginBottom: '10px' }}>Go to Promoter Portal →</a>
         <a href="/" style={{ display: 'block', color: '#1D9E75', padding: '10px', textDecoration: 'none' }}>Back to home</a>
       </div>
@@ -219,6 +247,31 @@ export default function LaunchPage() {
               {showCountryDropdown && <div onClick={() => setShowCountryDropdown(false)} style={{ position: 'fixed', inset: 0, zIndex: 99 }} />}
             </div>
 
+            {/* Slug / microsite URL */}
+            <div style={fld}>
+              <label style={lbl}>Your promotion page URL *</label>
+              <p style={{ fontSize: '13px', color: '#888', marginBottom: '6px' }}>Customers will access your promotion at this address. Use lowercase letters, numbers and hyphens only.</p>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', border: `1px solid ${slugAvailable === false ? '#fca5a5' : slugAvailable === true ? '#86efac' : '#ccc'}`, borderRadius: '8px', overflow: 'hidden', background: 'white' }}>
+                    <span style={{ padding: '10px 8px 10px 12px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>receiptraffle.com/p/</span>
+                    <input
+                      value={form.slug}
+                      onChange={e => handleSlugChange(e.target.value)}
+                      onBlur={checkSlug}
+                      placeholder="your-promo-name"
+                      style={{ flex: 1, padding: '10px 12px 10px 0', border: 'none', outline: 'none', fontSize: '15px', minWidth: 0 }}
+                    />
+                  </div>
+                  {slugAvailable === true && <div style={{ color: '#16a34a', fontSize: '12px', marginTop: '4px' }}>✓ Available</div>}
+                  {slugAvailable === false && <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px' }}>✗ Already taken — try another</div>}
+                  {checkingSlug && <div style={{ color: '#888', fontSize: '12px', marginTop: '4px' }}>Checking...</div>}
+                </div>
+                <button onClick={checkSlug} disabled={!form.slug || form.slug.length < 3} style={{ padding: '10px 14px', background: '#f3f4f6', border: '1px solid #ccc', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#555', whiteSpace: 'nowrap' }}>Check</button>
+              </div>
+            </div>
+
+            {/* Logo */}
             <div style={fld}>
               <label style={lbl}>Logo (optional)</label>
               <input type="file" accept="image/*" onChange={e => handleLogo(e.target.files?.[0] || null)} style={{ fontSize: '14px', marginBottom: '10px' }} />
@@ -249,6 +302,7 @@ export default function LaunchPage() {
             </div>
             <div style={fld}><label style={lbl}>Draw date *</label><input style={inp} type="date" value={form.drawDate} onChange={e => set('drawDate', e.target.value)} /></div>
 
+            {/* Prizes */}
             <div style={fld}>
               <label style={lbl}>Prizes *</label>
               {prizes.map((prize, i) => (
@@ -257,15 +311,16 @@ export default function LaunchPage() {
                     <input value={prize.position} onChange={e => updatePrize(i, 'position', e.target.value)} style={{ ...inp, fontWeight: 600, background: 'white' }} placeholder="e.g. 1st prize" />
                     {prizes.length > 1 && <button onClick={() => removePrize(i)} style={{ width: '32px', height: '32px', background: '#fee2e2', border: 'none', borderRadius: '6px', color: '#dc2626', cursor: 'pointer', fontWeight: 700, fontSize: '18px', flexShrink: 0 }}>×</button>}
                   </div>
-                  <input value={prize.description} onChange={e => updatePrize(i, 'description', e.target.value)} style={{ ...inp, background: 'white' }} placeholder="Describe the prize, e.g. $500 cash, return flights, Samsung TV" />
+                  <input value={prize.description} onChange={e => updatePrize(i, 'description', e.target.value)} style={{ ...inp, background: 'white' }} placeholder="Describe the prize" />
                 </div>
               ))}
               <button onClick={addPrize} style={{ padding: '8px 14px', background: '#f0fdf4', border: '1px solid #1D9E75', borderRadius: '8px', color: '#1D9E75', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>+ Add another prize</button>
             </div>
 
+            {/* Entry budget */}
             <div style={fld}>
               <label style={lbl}>How many entries do you wish to budget for? *</label>
-              <p style={{ fontSize: '13px', color: '#888', marginBottom: '10px' }}>This sets your pricing tier. If you are unsure, start with Starter — you can discuss with us before going live.</p>
+              <p style={{ fontSize: '13px', color: '#888', marginBottom: '10px' }}>This sets your pricing tier. If unsure, start with Starter.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {TIERS.map(tier => (
                   <div key={tier.value} onClick={() => set('entryBudgetTier', tier.value)} style={{ border: `2px solid ${form.entryBudgetTier === tier.value ? '#1D9E75' : '#e5e7eb'}`, borderRadius: '10px', padding: '12px 16px', cursor: 'pointer', background: form.entryBudgetTier === tier.value ? '#f0fdf4' : 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
@@ -277,7 +332,7 @@ export default function LaunchPage() {
                   </div>
                 ))}
               </div>
-              {selectedTier && (
+              {form.entryBudgetTier && (
                 <div style={{ marginTop: '12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#15803d' }}>
                   First 500 entries included free. Additional entries at $10 per 1,000. Our team will confirm your exact pricing on review.
                 </div>
