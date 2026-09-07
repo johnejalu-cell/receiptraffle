@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 export default function AdminPage() {
   const [tab, setTab] = useState('overview')
@@ -69,41 +69,24 @@ export default function AdminPage() {
   }
 
   async function activateSubmission(id: string) {
-    await fetch('/api/admin/submissions', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status: 'active' })
-    })
+    await fetch('/api/admin/submissions', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status: 'active' }) })
     loadData()
   }
 
   async function declineSubmission(id: string) {
-    await fetch('/api/admin/submissions', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status: 'declined' })
-    })
+    await fetch('/api/admin/submissions', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status: 'declined' }) })
     loadData()
   }
 
   async function updateEntry(id: string, status: string) {
-    await fetch('/api/admin/entries', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, verification_status: status })
-    })
+    await fetch('/api/admin/entries', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, verification_status: status }) })
     loadData()
   }
 
   async function saveFee() {
-    setFeeSaving(true)
-    setFeeSaved(false)
+    setFeeSaving(true); setFeeSaved(false)
     try {
-      const res = await fetch('/api/admin/fees', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: parseFloat(feeForm.amount) || 0, currency: feeForm.currency, description: feeForm.description })
-      })
+      const res = await fetch('/api/admin/fees', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: parseFloat(feeForm.amount) || 0, currency: feeForm.currency, description: feeForm.description }) })
       const data = await res.json()
       if (data.success) { setFee(data.fee); setFeeSaved(true); setTimeout(() => setFeeSaved(false), 3000) }
     } catch (e) {}
@@ -111,44 +94,25 @@ export default function AdminPage() {
   }
 
   async function deletePromotion(id: string, name: string) {
-    if (!confirm(`Delete "${name}"? This cannot be undone. Entries for this promotion will remain.`)) return
+    if (!confirm(`Delete "${name}"? This cannot be undone. Entries will remain.`)) return
     try {
-      const res = await fetch('/api/admin/promotions', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
-      })
+      const res = await fetch('/api/admin/promotions', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
       const data = await res.json()
-      if (data.success) {
-        setPromotions(prev => prev.filter(p => p.id !== id))
-      } else {
-        alert('Failed to delete: ' + (data.error || 'Unknown error'))
-      }
-    } catch (e) {
-      alert('Error deleting promotion')
-    }
+      if (data.success) setPromotions(prev => prev.filter(p => p.id !== id))
+      else alert('Failed to delete: ' + (data.error || 'Unknown error'))
+    } catch (e) { alert('Error deleting promotion') }
   }
 
   async function saveRedirect() {
     if (!newSlug || !newSlugPromo) { alert('Please enter both a slug and select a promotion'); return }
     setSlugSaving(true)
     try {
-      const res = await fetch('/api/admin/redirects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug: newSlug, promotion_id: newSlugPromo })
-      })
+      const res = await fetch('/api/admin/redirects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: newSlug, promotion_id: newSlugPromo }) })
       const data = await res.json()
       if (data.success) {
-        setRedirects(prev => {
-          const filtered = prev.filter(r => r.slug !== data.redirect.slug)
-          return [data.redirect, ...filtered]
-        })
-        setNewSlug('')
-        setNewSlugPromo('')
-      } else {
-        alert('Error: ' + (data.error || 'Unknown'))
-      }
+        setRedirects(prev => { const filtered = prev.filter(r => r.slug !== data.redirect.slug); return [data.redirect, ...filtered] })
+        setNewSlug(''); setNewSlugPromo('')
+      } else alert('Error: ' + (data.error || 'Unknown'))
     } catch (e) { alert('Error saving redirect') }
     setSlugSaving(false)
   }
@@ -156,11 +120,7 @@ export default function AdminPage() {
   async function deleteRedirect(slug: string) {
     if (!confirm('Delete redirect /' + slug + '?')) return
     try {
-      const res = await fetch('/api/admin/redirects', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug })
-      })
+      const res = await fetch('/api/admin/redirects', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug }) })
       const data = await res.json()
       if (data.success) setRedirects(prev => prev.filter(r => r.slug !== slug))
       else alert('Error: ' + (data.error || 'Unknown'))
@@ -196,27 +156,16 @@ export default function AdminPage() {
     iframe.style.display = 'none'
     document.body.appendChild(iframe)
     iframe.contentWindow!.document.open()
-    iframe.contentWindow!.document.write(`
-      <html><head><title>${promo.promo_name} - Entries</title>
-      <style>body{font-family:Arial;padding:20px;font-size:13px}h1{font-size:18px;margin-bottom:4px}.meta{color:#666;margin-bottom:20px;font-size:12px}table{width:100%;border-collapse:collapse}th{background:#1D9E75;color:white;padding:8px;text-align:left;font-size:12px}td{padding:7px 8px;border-bottom:1px solid #eee;font-size:12px}tr:nth-child(even){background:#f9f9f9}.approved{color:#085041;font-weight:bold}.pending{color:#633806}.rejected{color:#791F1F}@media print{.no-print{display:none}}</style>
-      </head><body>
-      <h1>ReceiptRaffle - ${promo.promo_name}</h1>
-      <div class="meta">${promo.company_name} | Draw: ${promo.draw_date} | Printed: ${new Date().toLocaleString('en-GB')} | Total: ${data.length} entries</div>
-      <button class="no-print" onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;background:#1D9E75;color:white;border:none;border-radius:6px;cursor:pointer">Print</button>
-      <table><tr><th>#</th><th>Ticket</th><th>Name</th><th>Phone</th><th>Email</th><th>Amount</th><th>Retailer</th><th>Date</th><th>Status</th><th>AI%</th></tr>
-      ${data.map((e: any, i: number) => `<tr><td>${i+1}</td><td>${e.ticket_number}</td><td><strong>${e.customer_name}</strong></td><td>${e.customer_phone}</td><td>${e.customer_email || '-'}</td><td>UGX ${parseInt(e.amount).toLocaleString()}</td><td>${e.retailer}</td><td>${e.created_at?.split('T')[0]}</td><td class="${e.verification_status}">${e.verification_status}</td><td>${e.ai_confidence}%</td></tr>`).join('')}
-      </table></body></html>`)
+    iframe.contentWindow!.document.write(`<html><head><title>${promo.promo_name} - Entries</title><style>body{font-family:Arial;padding:20px;font-size:13px}h1{font-size:18px;margin-bottom:4px}.meta{color:#666;margin-bottom:20px;font-size:12px}table{width:100%;border-collapse:collapse}th{background:#1D9E75;color:white;padding:8px;text-align:left;font-size:12px}td{padding:7px 8px;border-bottom:1px solid #eee;font-size:12px}tr:nth-child(even){background:#f9f9f9}.approved{color:#085041;font-weight:bold}.pending{color:#633806}.rejected{color:#791F1F}@media print{.no-print{display:none}}</style></head><body><h1>ReceiptRaffle - ${promo.promo_name}</h1><div class="meta">${promo.company_name} | Draw: ${promo.draw_date} | Printed: ${new Date().toLocaleString('en-GB')} | Total: ${data.length} entries</div><button class="no-print" onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;background:#1D9E75;color:white;border:none;border-radius:6px;cursor:pointer">Print</button><table><tr><th>#</th><th>Ticket</th><th>Name</th><th>Phone</th><th>Email</th><th>Amount</th><th>Retailer</th><th>Date</th><th>Status</th><th>AI%</th></tr>${data.map((e: any, i: number) => `<tr><td>${i+1}</td><td>${e.ticket_number}</td><td><strong>${e.customer_name}</strong></td><td>${e.customer_phone}</td><td>${e.customer_email || '-'}</td><td>${parseInt(e.amount).toLocaleString()}</td><td>${e.retailer}</td><td>${e.created_at?.split('T')[0]}</td><td class="${e.verification_status}">${e.verification_status}</td><td>${e.ai_confidence}%</td></tr>`).join('')}</table></body></html>`)
     iframe.contentWindow!.document.close()
     setTimeout(() => { iframe.contentWindow!.print(); document.body.removeChild(iframe) }, 500)
   }
 
-  // Build a lookup: promotion_id -> promo_name
   const promotionMap: Record<string, string> = {}
   promotions.forEach(p => { promotionMap[p.id] = p.promo_name })
 
   const filteredEntries = entries.filter(e => {
     if (entryFilter === 'archived') {
-      // Archived = belonged to a deleted promotion
       const matchSearch = !search || e.customer_name?.toLowerCase().includes(search.toLowerCase()) || e.ticket_number?.toLowerCase().includes(search.toLowerCase()) || e.customer_phone?.includes(search)
       return !e.promotion_id && e.promotion_name && matchSearch
     }
@@ -246,6 +195,7 @@ export default function AdminPage() {
 
   return (
     <main style={{ minHeight: '100vh', background: '#fafaf9' }}>
+      {/* Top bar */}
       <div style={{ background: '#1a1a2e', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ fontSize: 22 }}>{String.fromCodePoint(0x1f9fe)}</div>
@@ -260,6 +210,7 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* Tab bar */}
       <div style={{ background: '#fff', borderBottom: '1px solid #e5e5e0', padding: '0 1rem', display: 'flex', overflowX: 'auto' }}>
         {[
           { id: 'overview', label: 'Overview' },
@@ -275,11 +226,22 @@ export default function AdminPage() {
             {t.label}
           </button>
         ))}
+        {/* Grand Draws link */}
+        <button onClick={() => window.location.href = '/admin/grand-draws'}
+          style={{ padding: '12px 14px', background: 'none', border: 'none', borderBottom: '2px solid transparent', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#7c3aed', whiteSpace: 'nowrap' }}>
+          🏆 Grand Draws
+        </button>
+        {/* Content editor link */}
+        <button onClick={() => window.location.href = '/admin/content'}
+          style={{ padding: '12px 14px', background: 'none', border: 'none', borderBottom: '2px solid transparent', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#6366f1', whiteSpace: 'nowrap' }}>
+          ✏️ Content
+        </button>
       </div>
 
       <div style={{ padding: '1.25rem 1rem', maxWidth: 620, margin: '0 auto' }}>
         {loading && <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>Loading...</div>}
 
+        {/* OVERVIEW */}
         {tab === 'overview' && !loading && (
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
@@ -303,13 +265,14 @@ export default function AdminPage() {
             )}
             {pendingSubmissions.length > 0 && (
               <div style={{ background: '#E6F1FB', border: '1px solid #93C5FD', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#0C447C' }}>
-                String.fromCodePoint(0x1f4cb) <strong>{pendingSubmissions.length} promotion submissions</strong> awaiting approval.
+                <strong>{pendingSubmissions.length} promotion submissions</strong> awaiting approval.
                 <button onClick={() => setTab('submissions')} style={{ background: 'none', border: 'none', color: '#0C447C', textDecoration: 'underline', cursor: 'pointer', fontSize: 13, marginLeft: 4 }}>View</button>
               </div>
             )}
           </div>
         )}
 
+        {/* SUBMISSIONS */}
         {tab === 'submissions' && !loading && (
           <div>
             <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Promotion submissions</p>
@@ -320,6 +283,8 @@ export default function AdminPage() {
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{s.promo_name}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{s.company_name} · Ref: {s.ref}</div>
+                    {s.slug && <div style={{ fontSize: 11, color: '#1D9E75', marginTop: 2 }}>Microsite: /p/{s.slug}</div>}
+                    {s.entry_budget_tier && <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Tier: {s.entry_budget_tier} · Country: {s.country || 'Not set'}</div>}
                   </div>
                   <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600,
                     background: s.status === 'active' ? '#E1F5EE' : s.status === 'declined' ? '#FCEBEB' : '#FFF8E6',
@@ -331,117 +296,111 @@ export default function AdminPage() {
                   <div>Contact: <strong>{s.contact_name}</strong></div>
                   <div>Phone: <strong>{s.phone}</strong></div>
                   <div>Email: <strong>{s.email}</strong></div>
-                  <div>Min spend: <strong>{s.currency || 'UGX'} {parseInt(s.min_spend).toLocaleString()}</strong></div>
+                  <div>Min spend: <strong>{s.currency || 'USD'} {parseInt(s.min_spend).toLocaleString()}</strong></div>
                   <div>Draw: <strong>{s.draw_date}</strong></div>
                   <div>Submitted: <strong>{s.created_at?.split('T')[0]}</strong></div>
                 </div>
-                <div style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>
-                  Prizes: {Array.isArray(s.prizes) ? s.prizes.join(' · ') : s.prizes}
-                </div>
+                <div style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>Prizes: {Array.isArray(s.prizes) ? s.prizes.join(' · ') : s.prizes}</div>
                 {s.status === 'pending' && (
-                  <>
-
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={() => activateSubmission(s.id)} style={{ flex: 1, padding: '10px', background: '#E1F5EE', color: '#085041', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>✓ Activate</button>
-                      <button onClick={() => declineSubmission(s.id)} style={{ flex: 1, padding: '10px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>✗ Decline</button>
-                    </div>
-                  </>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => activateSubmission(s.id)} style={{ flex: 1, padding: '10px', background: '#E1F5EE', color: '#085041', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>✓ Activate</button>
+                    <button onClick={() => declineSubmission(s.id)} style={{ flex: 1, padding: '10px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>✗ Decline</button>
+                  </div>
                 )}
               </div>
             ))}
           </div>
         )}
 
+        {/* PROMOTIONS */}
         {tab === 'promotions' && !loading && (
           <>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-              <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Active promotions</p>
-              <button onClick={() => exportCSV('all')} style={{ padding: '6px 14px', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Export all CSV</button>
-            </div>
-            {promotions.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>No active promotions yet</div>}
-            {promotions.map(p => {
-              const promoEntries = entries.filter(e => e.promotion_id === p.id)
-              const approved = promoEntries.filter(e => e.verification_status === 'approved').length
-              const pending = promoEntries.filter(e => e.verification_status === 'manual_review').length
-              return (
-                <div key={p.id} style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 700 }}>{p.promo_name}</div>
-                      <div style={{ fontSize: 12, color: '#888' }}>{p.company_name} · Draw: {p.draw_date}</div>
-                    </div>
-                    <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#E1F5EE', color: '#085041', fontWeight: 600 }}>Active</span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 12 }}>
-                    <div style={{ background: '#f5f5f0', borderRadius: 8, padding: '8px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 10, color: '#999' }}>Total</div>
-                      <div style={{ fontSize: 18, fontWeight: 700 }}>{promoEntries.length}</div>
-                    </div>
-                    <div style={{ background: '#E8F8F2', borderRadius: 8, padding: '8px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 10, color: '#0F6E56' }}>Approved</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: '#1D9E75' }}>{approved}</div>
-                    </div>
-                    <div style={{ background: '#FFF8E6', borderRadius: 8, padding: '8px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 10, color: '#854F0B' }}>Review</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: '#854F0B' }}>{pending}</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                    <button onClick={() => exportCSV(p.id)} style={{ flex: 1, padding: '8px', background: '#EEEDFE', color: '#3C3489', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>CSV</button>
-                    <button onClick={() => printEntries(p)} style={{ flex: 1, padding: '8px', background: '#E6F1FB', color: '#0C447C', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Print</button>
-                    <button onClick={() => { setPromoFilter(p.id); setTab('entries') }} style={{ flex: 1, padding: '8px', background: '#f5f5f0', color: '#1a1a18', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>View entries</button>
-                  </div>
-                  <button onClick={() => deletePromotion(p.id, p.promo_name)} style={{ width: '100%', padding: '8px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>Delete promotion</button>
-                  <button onClick={() => setQrModal({ url: `https://receiptraffle-ygef.vercel.app/enter/${p.id}`, name: p.promo_name })} style={{ width: '100%', padding: '8px', background: '#E8F8F2', color: '#085041', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{String.fromCodePoint(0x1F4F1)} QR code</button>
-                </div>
-              )
-            })}
-          </div>
-
-          <div style={{ marginTop: 24 }}>
-            <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>QR code redirects</p>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>Link an existing product QR code to a promotion. Give the promoter this redirect URL - they update their QR code destination to point to it.</p>
-            <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 12 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Short keyword (slug)</label>
-                  <input value={newSlug} onChange={e => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                    placeholder="e.g. krackles" style={{ width: '100%', padding: '10px 12px', border: '1px solid #d0d0c8', borderRadius: 8, fontSize: 14, background: '#fff' }} />
-                  {newSlug && <div style={{ fontSize: 11, color: '#1D9E75', marginTop: 4 }}>Redirect URL: receiptraffle-ygef.vercel.app/r/{newSlug}</div>}
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Link to promotion</label>
-                  <select value={newSlugPromo} onChange={e => setNewSlugPromo(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #d0d0c8', borderRadius: 8, fontSize: 14, background: '#fff' }}>
-                    <option value="">Select promotion...</option>
-                    {promotions.map(p => <option key={p.id} value={p.id}>{p.promo_name} ({p.company_name})</option>)}
-                  </select>
-                </div>
-                <button onClick={saveRedirect} disabled={slugSaving || !newSlug || !newSlugPromo}
-                  style={{ width: '100%', padding: '10px', background: slugSaving ? '#9BA4B5' : '#1D9E75', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-                  {slugSaving ? 'Saving...' : 'Save redirect'}
-                </button>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Active promotions</p>
+                <button onClick={() => exportCSV('all')} style={{ padding: '6px 14px', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Export all CSV</button>
               </div>
-            </div>
-            {redirects.length === 0 && <div style={{ fontSize: 13, color: '#999', textAlign: 'center', padding: '1rem' }}>No redirects set up yet</div>}
-            {redirects.map(r => {
-              const promo = promotions.find(p => p.id === r.promotion_id)
-              return (
-                <div key={r.slug} style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 10, padding: '12px 14px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700 }}>/r/{r.slug}</div>
-                    <div style={{ fontSize: 12, color: '#1D9E75' }}>{promo ? promo.promo_name : 'Unknown promotion'}</div>
-                    <div style={{ fontSize: 11, color: '#aaa', wordBreak: 'break-all' }}>receiptraffle-ygef.vercel.app/r/{r.slug}</div>
+              {promotions.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>No active promotions yet</div>}
+              {promotions.map(p => {
+                const promoEntries = entries.filter(e => e.promotion_id === p.id)
+                const approved = promoEntries.filter(e => e.verification_status === 'approved').length
+                const pending = promoEntries.filter(e => e.verification_status === 'manual_review').length
+                return (
+                  <div key={p.id} style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700 }}>{p.promo_name}</div>
+                        <div style={{ fontSize: 12, color: '#888' }}>{p.company_name} · Draw: {p.draw_date}</div>
+                        {p.grand_draw_id && <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600, marginTop: 2 }}>🏆 Linked to Grand Draw</div>}
+                        {p.slug && <div style={{ fontSize: 11, color: '#1D9E75', marginTop: 2 }}>🔗 /p/{p.slug}</div>}
+                      </div>
+                      <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#E1F5EE', color: '#085041', fontWeight: 600 }}>Active</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 12 }}>
+                      <div style={{ background: '#f5f5f0', borderRadius: 8, padding: '8px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 10, color: '#999' }}>Total</div>
+                        <div style={{ fontSize: 18, fontWeight: 700 }}>{promoEntries.length}</div>
+                      </div>
+                      <div style={{ background: '#E8F8F2', borderRadius: 8, padding: '8px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 10, color: '#0F6E56' }}>Approved</div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#1D9E75' }}>{approved}</div>
+                      </div>
+                      <div style={{ background: '#FFF8E6', borderRadius: 8, padding: '8px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 10, color: '#854F0B' }}>Review</div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#854F0B' }}>{pending}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <button onClick={() => exportCSV(p.id)} style={{ flex: 1, padding: '8px', background: '#EEEDFE', color: '#3C3489', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>CSV</button>
+                      <button onClick={() => printEntries(p)} style={{ flex: 1, padding: '8px', background: '#E6F1FB', color: '#0C447C', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Print</button>
+                      <button onClick={() => { setPromoFilter(p.id); setTab('entries') }} style={{ flex: 1, padding: '8px', background: '#f5f5f0', color: '#1a1a18', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Entries</button>
+                    </div>
+                    <button onClick={() => deletePromotion(p.id, p.promo_name)} style={{ width: '100%', padding: '8px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>Delete promotion</button>
+                    <button onClick={() => setQrModal({ url: `https://receiptraffle-ygef.vercel.app/enter/${p.id}`, name: p.promo_name })} style={{ width: '100%', padding: '8px', background: '#E8F8F2', color: '#085041', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>{String.fromCodePoint(0x1F4F1)} QR code</button>
                   </div>
-                  <button onClick={() => deleteRedirect(r.slug)} style={{ padding: '6px 12px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>Delete</button>
+                )
+              })}
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>QR code redirects</p>
+              <p style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>Link an existing product QR code to a promotion.</p>
+              <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Short keyword (slug)</label>
+                    <input value={newSlug} onChange={e => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} placeholder="e.g. krackles" style={{ width: '100%', padding: '10px 12px', border: '1px solid #d0d0c8', borderRadius: 8, fontSize: 14, background: '#fff' }} />
+                    {newSlug && <div style={{ fontSize: 11, color: '#1D9E75', marginTop: 4 }}>Redirect URL: receiptraffle-ygef.vercel.app/r/{newSlug}</div>}
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 4 }}>Link to promotion</label>
+                    <select value={newSlugPromo} onChange={e => setNewSlugPromo(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1px solid #d0d0c8', borderRadius: 8, fontSize: 14, background: '#fff' }}>
+                      <option value="">Select promotion...</option>
+                      {promotions.map(p => <option key={p.id} value={p.id}>{p.promo_name} ({p.company_name})</option>)}
+                    </select>
+                  </div>
+                  <button onClick={saveRedirect} disabled={slugSaving || !newSlug || !newSlugPromo} style={{ width: '100%', padding: '10px', background: slugSaving ? '#9BA4B5' : '#1D9E75', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                    {slugSaving ? 'Saving...' : 'Save redirect'}
+                  </button>
                 </div>
-              )
-            })}
-          </div>
+              </div>
+              {redirects.length === 0 && <div style={{ fontSize: 13, color: '#999', textAlign: 'center', padding: '1rem' }}>No redirects set up yet</div>}
+              {redirects.map(r => {
+                const promo = promotions.find(p => p.id === r.promotion_id)
+                return (
+                  <div key={r.slug} style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 10, padding: '12px 14px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>/r/{r.slug}</div>
+                      <div style={{ fontSize: 12, color: '#1D9E75' }}>{promo ? promo.promo_name : 'Unknown promotion'}</div>
+                    </div>
+                    <button onClick={() => deleteRedirect(r.slug)} style={{ padding: '6px 12px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>Delete</button>
+                  </div>
+                )
+              })}
+            </div>
           </>
         )}
 
+        {/* ENTRIES */}
         {tab === 'entries' && !loading && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -451,8 +410,7 @@ export default function AdminPage() {
             <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, phone or ticket..."
               style={{ width: '100%', padding: '10px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, marginBottom: 10, background: '#fff' }} />
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-              <select value={promoFilter} onChange={e => setPromoFilter(e.target.value)}
-                style={{ padding: '6px 10px', border: '1px solid #d0d0c8', borderRadius: 8, fontSize: 12, background: '#fff' }}>
+              <select value={promoFilter} onChange={e => setPromoFilter(e.target.value)} style={{ padding: '6px 10px', border: '1px solid #d0d0c8', borderRadius: 8, fontSize: 12, background: '#fff' }}>
                 <option value="all">All promotions</option>
                 {promotions.map(p => <option key={p.id} value={p.id}>{p.promo_name}</option>)}
               </select>
@@ -469,7 +427,7 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{e.customer_name}</div>
-                    <div style={{ fontSize: 12, color: e.promotion_id ? '#1D9E75' : '#999', fontWeight: 600 }}>{promotionMap[e.promotion_id] || e.promotion_name || 'Unknown promotion'}{e.company_name ? ' · ' + e.company_name : ''}{!e.promotion_id && e.promotion_name ? ' (archived)' : ''}</div>
+                    <div style={{ fontSize: 12, color: e.promotion_id ? '#1D9E75' : '#999', fontWeight: 600 }}>{promotionMap[e.promotion_id] || e.promotion_name || 'Unknown'}{!e.promotion_id && e.promotion_name ? ' (archived)' : ''}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone}{e.customer_email ? ` · ${e.customer_email}` : ''}</div>
                     <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>{e.ai_result?.currency || e.currency || 'USD'} {parseInt(e.ai_result?.promoted_items_total || e.ai_result?.total_amount || e.amount || 0).toLocaleString()} · {e.ai_result?.retailer || e.retailer || 'Unknown'}</div>
                     <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>Ticket: {e.ticket_number} · AI: {e.ai_confidence}% · {e.created_at?.split('T')[0]}</div>
@@ -485,6 +443,7 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* REVIEW */}
         {tab === 'review' && !loading && (
           <div>
             <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Manual review queue ({pendingEntries.length})</p>
@@ -494,7 +453,7 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{e.customer_name}</div>
-                    <div style={{ fontSize: 12, color: '#1D9E75', fontWeight: 600 }}>{promotionMap[e.promotion_id] || e.promotion_name || 'Unknown promotion'}</div>
+                    <div style={{ fontSize: 12, color: '#1D9E75', fontWeight: 600 }}>{promotionMap[e.promotion_id] || e.promotion_name || 'Unknown'}</div>
                     <div style={{ fontSize: 12, color: '#888' }}>{e.customer_phone} · {e.created_at?.split('T')[0]}</div>
                   </div>
                   <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#FFF8E6', color: '#633806', fontWeight: 600 }}>AI: {e.ai_confidence}%</span>
@@ -519,9 +478,11 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* DRAWS */}
         {tab === 'draws' && !loading && (
           <div>
-            <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Prize draws</p>
+            <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Prize draws</p>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>For individual promotion draws. For grand draws across multiple promotions, use the <button onClick={() => window.location.href='/admin/grand-draws'} style={{ background: 'none', border: 'none', color: '#7c3aed', cursor: 'pointer', fontWeight: 600, fontSize: 13, padding: 0, textDecoration: 'underline' }}>Grand Draws</button> section.</p>
             {promotions.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>No active promotions</div>}
             {promotions.map(p => {
               const eligible = entries.filter(e => e.promotion_id === p.id && e.verification_status === 'approved').length
@@ -537,72 +498,72 @@ export default function AdminPage() {
                   ))}
                   <button onClick={() => runDraw(p.id, p.promo_name)} disabled={drawingId === p.id || eligible === 0}
                     style={{ width: '100%', padding: '10px', background: drawingId === p.id ? '#9BA4B5' : eligible === 0 ? '#ddd' : '#534AB7', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: drawingId === p.id || eligible === 0 ? 'not-allowed' : 'pointer' }}>
-                    {drawingId === p.id ? 'Drawing...' : eligible === 0 ? 'No eligible entries' : 'ð² Run draw'}
+                    {drawingId === p.id ? 'Drawing...' : eligible === 0 ? 'No eligible entries' : '🎲 Run draw'}
                   </button>
                 </div>
               )
             })}
           </div>
         )}
-      </div>
-      {tab === 'fees' && !loading && (
-        <div>
-          <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Promotion fee settings</p>
-          <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Set the fee promoters pay before their promotion goes live. This appears automatically on the promoter submission form.</p>
-          <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 12 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Fee amount</label>
-                <input type="number" value={feeForm.amount} onChange={e => setFeeForm(f => ({ ...f, amount: e.target.value }))} placeholder="e.g. 250"
-                  style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Currency</label>
-                <select value={feeForm.currency} onChange={e => setFeeForm(f => ({ ...f, currency: e.target.value }))}
-                  style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }}>
-                  <option value="USD">USD - US Dollar</option>
-                  <option value="GBP">GBP - British Pound</option>
-                  <option value="EUR">EUR - Euro</option>
-                  <option value="UGX">UGX - Ugandan Shilling</option>
-                  <option value="KES">KES - Kenyan Shilling</option>
-                  <option value="NGN">NGN - Nigerian Naira</option>
-                  <option value="ZAR">ZAR - South African Rand</option>
-                  <option value="GHS">GHS - Ghanaian Cedi</option>
-                  <option value="TZS">TZS - Tanzanian Shilling</option>
-                  <option value="AUD">AUD - Australian Dollar</option>
-                  <option value="CAD">CAD - Canadian Dollar</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Payment instructions (optional)</label>
-                <input type="text" value={feeForm.description} onChange={e => setFeeForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Pay via bank transfer or mobile money"
-                  style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
-              </div>
-              <button onClick={saveFee} disabled={feeSaving || !feeForm.amount}
-                style={{ width: '100%', padding: '12px', background: feeSaving ? '#9BA4B5' : feeSaved ? '#085041' : '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: feeSaving ? 'not-allowed' : 'pointer' }}>
-                {feeSaving ? 'Saving...' : feeSaved ? 'Saved!' : 'Save fee settings'}
-              </button>
-            </div>
-          </div>
-          {fee && (
-            <div style={{ background: '#E8F8F2', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#085041' }}>
-              Current fee: <strong>{fee.currency} {fee.amount.toLocaleString()}</strong>
-              {fee.description && <span> - {fee.description}</span>}
-            </div>
-          )}
-        </div>
-      )}
 
+        {/* FEES */}
+        {tab === 'fees' && !loading && (
+          <div>
+            <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Promotion fee settings</p>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>Set the fee promoters pay before their promotion goes live.</p>
+            <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Fee amount</label>
+                  <input type="number" value={feeForm.amount} onChange={e => setFeeForm(f => ({ ...f, amount: e.target.value }))} placeholder="e.g. 250"
+                    style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Currency</label>
+                  <select value={feeForm.currency} onChange={e => setFeeForm(f => ({ ...f, currency: e.target.value }))}
+                    style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }}>
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="GBP">GBP - British Pound</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="UGX">UGX - Ugandan Shilling</option>
+                    <option value="KES">KES - Kenyan Shilling</option>
+                    <option value="NGN">NGN - Nigerian Naira</option>
+                    <option value="ZAR">ZAR - South African Rand</option>
+                    <option value="GHS">GHS - Ghanaian Cedi</option>
+                    <option value="TZS">TZS - Tanzanian Shilling</option>
+                    <option value="AUD">AUD - Australian Dollar</option>
+                    <option value="CAD">CAD - Canadian Dollar</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Payment instructions (optional)</label>
+                  <input type="text" value={feeForm.description} onChange={e => setFeeForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Pay via bank transfer or mobile money"
+                    style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, background: '#fff' }} />
+                </div>
+                <button onClick={saveFee} disabled={feeSaving || !feeForm.amount}
+                  style={{ width: '100%', padding: '12px', background: feeSaving ? '#9BA4B5' : feeSaved ? '#085041' : '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: feeSaving ? 'not-allowed' : 'pointer' }}>
+                  {feeSaving ? 'Saving...' : feeSaved ? 'Saved!' : 'Save fee settings'}
+                </button>
+              </div>
+            </div>
+            {fee && (
+              <div style={{ background: '#E8F8F2', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#085041' }}>
+                Current fee: <strong>{fee.currency} {fee.amount.toLocaleString()}</strong>
+                {fee.description && <span> - {fee.description}</span>}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* QR Modal */}
       {qrModal && (
         <div onClick={() => setQrModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: '1.5rem', maxWidth: 360, width: '100%', textAlign: 'center' }}>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{qrModal.name}</div>
             <div style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Scan to enter this promotion</div>
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrModal.url)}&margin=10`}
-              alt="QR Code"
-              style={{ width: 260, height: 260, borderRadius: 8, border: '1px solid #e5e5e0', display: 'block', margin: '0 auto 16px' }}
-            />
+            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrModal.url)}&margin=10`} alt="QR Code"
+              style={{ width: 260, height: 260, borderRadius: 8, border: '1px solid #e5e5e0', display: 'block', margin: '0 auto 16px' }} />
             <div style={{ fontSize: 11, color: '#aaa', marginBottom: 16, wordBreak: 'break-all' }}>{qrModal.url}</div>
             <div style={{ display: 'flex', gap: 8 }}>
               <a href={`https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(qrModal.url)}&margin=20`}
@@ -616,6 +577,7 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* Receipt Modal */}
       {receiptModal && (
         <div onClick={() => setReceiptModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: '1.25rem', maxWidth: 480, width: '100%', maxHeight: '90vh', overflow: 'auto' }}>
@@ -624,7 +586,7 @@ export default function AdminPage() {
               <button onClick={() => setReceiptModal(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666' }}>×</button>
             </div>
             <img src={receiptModal.url} alt="Receipt" style={{ width: '100%', borderRadius: 8, border: '1px solid #e5e5e0' }}
-              onError={() => alert('Could not load receipt image. It may not have been stored.')} />
+              onError={() => alert('Could not load receipt image.')} />
           </div>
         </div>
       )}
