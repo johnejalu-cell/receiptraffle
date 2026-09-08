@@ -1,4 +1,4 @@
-// v14 - clean rewrite with barcode support
+// v15 - uploads receipt image to Supabase Storage for admin review
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -87,21 +87,11 @@ export async function POST(req: NextRequest) {
       companyName,
     } = body
 
-    console.warn('[entries] Request received:', {
-      hasImage: !!imageBase64,
-      imageLength: imageBase64?.length || 0,
-      mediaType, name, phone, promotionId, minSpend,
-      keywords: productKeywords,
-      barcodes: productBarcodes,
-    })
-
     if (!name || !phone) return NextResponse.json({ error: 'Missing name or phone' }, { status: 400 })
     if (!imageBase64) return NextResponse.json({ error: 'No image received' }, { status: 400 })
 
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     const anthropicKey = process.env.ANTHROPIC_API_KEY
-
-    console.warn('[entries] Keys present:', { hasServiceKey: !!serviceKey, hasAnthropicKey: !!anthropicKey })
 
     const ticket = 'RR-' + Math.random().toString(36).substring(2, 10).toUpperCase()
     const safeMediaType = normaliseMediaType(mediaType || '')
@@ -136,7 +126,6 @@ export async function POST(req: NextRequest) {
       console.warn('[entries] No Anthropic key - skipping AI')
     } else {
       try {
-        console.warn('[entries] Calling Anthropic API...')
         const anthropic = new Anthropic({ apiKey: anthropicKey })
         const prompt = buildPrompt(keywords, barcodes, minSpend || 0, currency || 'USD')
 
@@ -153,14 +142,11 @@ export async function POST(req: NextRequest) {
         })
 
         const rawText = response.content.map((c: { type: string; text?: string }) => c.type === 'text' ? (c.text || '') : '').join('')
-        console.warn('[entries] AI raw response:', rawText.substring(0, 300))
-
         const firstBrace = rawText.indexOf('{')
         const lastBrace = rawText.lastIndexOf('}')
         if (firstBrace === -1 || lastBrace === -1) throw new Error('No JSON in AI response: ' + rawText.substring(0, 100))
 
         const parsed = JSON.parse(rawText.substring(firstBrace, lastBrace + 1))
-        console.warn('[entries] AI parsed:', parsed)
 
         let matchedItems: string[] = []
         const matchedTotal = parsed.promoted_items_total || 0
@@ -178,8 +164,6 @@ export async function POST(req: NextRequest) {
         const meetsMinimum = amountToCheck >= (minSpend || 0)
         const hasItems = keywords.length === 0 || matchedItems.length > 0
         const isReadable = (parsed.confidence || 0) >= 40
-
-        console.warn('[entries] Checks:', { amountToCheck, minSpend, meetsMinimum, hasItems, isReadable, status: parsed.verification_status })
 
         if (meetsMinimum && hasItems && isReadable && parsed.verification_status === 'approved') {
           aiResult = { ...parsed, promoted_items_found: matchedItems, verification_status: 'approved' }
@@ -200,6 +184,27 @@ export async function POST(req: NextRequest) {
     if (serviceKey) {
       const { createClient } = await import('@supabase/supabase-js')
       const supabase = createClient(SUPABASE_URL, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+
+      // Upload receipt image to Supabase Storage
+      let receiptImagePath: string | null = null
+      try {
+        const imageBuffer = Buffer.from(imageBase64, 'base64')
+        const ext = safeMediaType === 'image/png' ? 'png' : safeMediaType === 'image/gif' ? 'gif' : safeMediaType === 'image/webp' ? 'webp' : 'jpg'
+        const imagePath = `receipts/${ticket}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('receipts')
+          .upload(imagePath, imageBuffer, { contentType: safeMediaType, upsert: false })
+        if (uploadError) {
+          console.error('[entries] Image upload error:', uploadError.message)
+        } else {
+          receiptImagePath = imagePath
+          console.warn('[entries] Receipt uploaded:', imagePath)
+        }
+      } catch (uploadErr: unknown) {
+        console.error('[entries] Upload exception:', uploadErr instanceof Error ? uploadErr.message : String(uploadErr))
+      }
+
+      // Save entry to database
       const { error: dbError } = await supabase.from('customer_entries').insert({
         promotion_id: promotionId || null,
         customer_name: name,
@@ -213,10 +218,11 @@ export async function POST(req: NextRequest) {
         verification_status: isApproved ? 'approved' : 'manual_review',
         ai_confidence: aiResult.confidence || 0,
         ai_result: { ...aiResult, barcode_found: aiResult.barcode_found || false },
-        receipt_image_path: null,
+        receipt_image_path: receiptImagePath,
         promotion_name: promotionName || null,
         company_name: companyName || null,
       })
+
       if (dbError) {
         console.error('[entries] DB ERROR:', dbError.message)
         return NextResponse.json({ error: 'Failed to save entry: ' + dbError.message }, { status: 500 })
