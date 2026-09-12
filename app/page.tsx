@@ -79,8 +79,7 @@ export default function HomePage() {
       .then(d => { if (d.content) setContent({ ...DEFAULTS, ...d.content }) })
       .catch(() => {})
 
-    // Auto-load all promotions on arrival so customers see something immediately
-    loadPromotions('all')
+    // Promotions only load after a country is selected
   }, [])
 
   const loadPromotions = async (countryCode: string) => {
@@ -162,7 +161,7 @@ export default function HomePage() {
             </div>
             <button
               onClick={() => selectCountry('all', 'All countries', '🌍')}
-              style={{ padding: '12px 16px', background: selectedCountry === 'all' || !selectedCountry ? '#1D9E75' : '#f3f4f6', border: 'none', borderRadius: '10px', color: selectedCountry === 'all' || !selectedCountry ? 'white' : '#555', fontWeight: 600, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '12px 16px', background: selectedCountry === 'all' ? '#1D9E75' : '#f3f4f6', border: 'none', borderRadius: '10px', color: selectedCountry === 'all' ? 'white' : '#555', fontWeight: 600, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               🌍 All
             </button>
@@ -174,6 +173,16 @@ export default function HomePage() {
 
         {/* Promotions list */}
         <div style={{ marginTop: '20px', marginBottom: '120px' }}>
+
+          {/* Prompt to select country */}
+          {!hasSearched && !loading && (
+            <div style={{ textAlign: 'center', padding: '48px 24px', background: 'white', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+              <div style={{ fontSize: '40px', marginBottom: '14px' }}>🌍</div>
+              <div style={{ fontWeight: 700, fontSize: '16px', color: '#111', marginBottom: '8px' }}>Select your country above</div>
+              <div style={{ fontSize: '14px', color: '#888' }}>We will show you active promotions available in your country</div>
+            </div>
+          )}
+
           {loading && (
             <div style={{ textAlign: 'center', padding: '32px', color: '#888' }}>
               <div style={{ fontSize: '28px', marginBottom: '8px' }}>🔍</div>
