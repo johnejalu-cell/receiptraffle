@@ -57,39 +57,74 @@ export default function EnterPage({ params }: { params: { id: string } }) {
   )
 
   function handleFile(f: File) {
-    setFile(f)
-    if (f.type.startsWith('image/')) {
-      setPreview(URL.createObjectURL(f))
-    } else {
-      setPreview('pdf')
-    }
+    // Ensure file has a type — camera photos on Android sometimes don't
+    const safeFile = f.type ? f : new File([f], f.name || 'photo.jpg', { type: 'image/jpeg' })
+    setFile(safeFile)
+    setPreview(URL.createObjectURL(safeFile))
+  }
+
+  // Compress image using canvas to stay well under Vercel's 4.5MB limit
+  function compressImage(f: File): Promise<{ base64: string; type: string }> {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      const url = URL.createObjectURL(f)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        // Target max dimension of 1600px — enough for AI to read text clearly
+        const MAX = 1600
+        let { width, height } = img
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round(height * MAX / width); width = MAX }
+          else { width = Math.round(width * MAX / height); height = MAX }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { reject(new Error('Canvas not supported')); return }
+        ctx.drawImage(img, 0, 0, width, height)
+        // Use JPEG at 0.85 quality — good balance of size and readability
+        const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1]
+        resolve({ base64, type: 'image/jpeg' })
+      }
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image')) }
+      img.src = url
+    })
   }
 
   async function handleVerify() {
     if (!name || !phone) { alert('Please enter your name and phone number'); return }
     setStep('verifying')
     try {
-      // Compress image before converting to base64 to stay under Vercel 4.5MB limit
-      // Convert file to base64 directly — simple and reliable across all browsers
-      const toBase64 = (f: File): Promise<{base64: string, type: string}> => new Promise((res, rej) => {
-        const reader = new FileReader()
-        reader.onload = () => {
-          const dataUrl = reader.result as string
-          const parts = dataUrl.split(',')
-          const base64 = parts.length > 1 ? parts[1] : dataUrl
-          const type = (f.type && f.type !== '') ? f.type : 'image/jpeg'
-          res({ base64, type })
-        }
-        reader.onerror = rej
-        reader.readAsDataURL(f)
-      })
-      const { base64, type: compressedType } = await toBase64(file!)
+      let base64: string
+      let mediaType: string
+
+      if (file!.type === 'application/pdf') {
+        // PDF — read as base64 directly, no compression
+        const result = await new Promise<string>((res, rej) => {
+          const reader = new FileReader()
+          reader.onload = () => {
+            const dataUrl = reader.result as string
+            res(dataUrl.split(',')[1])
+          }
+          reader.onerror = rej
+          reader.readAsDataURL(file!)
+        })
+        base64 = result
+        mediaType = 'application/pdf'
+      } else {
+        // Image — compress before sending
+        const compressed = await compressImage(file!)
+        base64 = compressed.base64
+        mediaType = compressed.type
+      }
+
       const res = await fetch('/api/entries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageBase64: base64,
-          mediaType: compressedType || 'image/jpeg',
+          mediaType,
           minSpend: promo.minSpend,
           currency: promo.currency,
           promotionId: promo.dbId || null,
@@ -98,14 +133,18 @@ export default function EnterPage({ params }: { params: { id: string } }) {
           name,
           phone,
           email,
+          promotionName: promo.title,
+          companyName: promo.brand,
         })
       })
+
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setResult(data.aiResult)
       setTicket(data.ticketNumber)
       setStep(data.verificationStatus === 'approved' ? 'success' : 'manual')
     } catch (err) {
+      console.error('Verification error:', err)
       const t = 'RR-' + Math.random().toString(36).substring(2, 10).toUpperCase()
       setTicket(t)
       setStep('manual')
@@ -116,7 +155,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#fafaf9', textAlign: 'center' }}>
       <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
       <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Verifying your receipt...</h2>
-      <p style={{ color: '#666', fontSize: 14 }}>Our AI is checking your receipt for the promoted products. This takes a few seconds.</p>
+      <p style={{ color: '#666', fontSize: 14 }}>Our AI is checking your receipt. This takes a few seconds.</p>
     </main>
   )
 
@@ -157,7 +196,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
       <div style={{ background: '#E8F8F2', border: '1px solid #9FE1CB', borderRadius: 12, padding: '14px 18px', maxWidth: 340, width: '100%', marginBottom: 20, textAlign: 'left' }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#085041', marginBottom: 6 }}>✓ Your entry is in the draw</div>
         <div style={{ fontSize: 13, color: '#0F6E56', lineHeight: 1.6 }}>
-          Save your ticket number. You will only be contacted on <strong>{phone}</strong> if there is a problem with your receipt. Otherwise your entry stands and you are in the draw!
+          Save your ticket number. You will only be contacted on <strong>{phone}</strong> if there is a problem with your receipt. Otherwise your entry stands!
         </div>
       </div>
       <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>← Back to promotions</Link>
@@ -208,7 +247,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
               ) : (
                 <div style={{ fontSize: 12, fontWeight: 600, color: promo.color || '#1D9E75', marginBottom: 8 }}>WIN: {promo.prize}</div>
               )}
-              <div style={{ fontSize: 12, color: '#888' }}>Min spend: {promo.currency} {parseInt(promo.minSpend).toLocaleString()} on promoted products</div>
+              <div style={{ fontSize: 12, color: '#888' }}>Min spend: {promo.currency} {parseInt(promo.minSpend).toLocaleString()}</div>
               {promo.drawDate && <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Draw date: {promo.drawDate}</div>}
             </div>
           </div>
@@ -228,36 +267,40 @@ export default function EnterPage({ params }: { params: { id: string } }) {
           <div>
             <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>Upload your receipt</h2>
             <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>
-              Take a photo or choose an image. Make sure the receipt clearly shows the promoted products and amounts.
+              Take a photo or choose from your gallery. Make sure the receipt is clear and easy to read.
             </p>
             {!preview ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '18px', background: '#1D9E75', color: '#fff', borderRadius: 12, cursor: 'pointer', fontSize: 16, fontWeight: 700 }}>
                   <span style={{ fontSize: 24 }}>📷</span>
                   Take a photo now
-                  <input type="file" accept="image/*" capture="environment" onChange={e => { const f = e.target.files?.[0]; if (f) { const safeFile = f.type ? f : new File([f], f.name || 'photo.jpg', { type: 'image/jpeg' }); handleFile(safeFile) } }} style={{ display: 'none' }} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+                    style={{ display: 'none' }}
+                  />
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '18px', background: '#fff', color: '#1a1a18', border: '1.5px solid #d0d0c8', borderRadius: 12, cursor: 'pointer', fontSize: 16, fontWeight: 600 }}>
                   <span style={{ fontSize: 24 }}>🖼</span>
                   Choose from gallery
-                  <input type="file" accept="image/*,application/pdf" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} style={{ display: 'none' }} />
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }}
+                    style={{ display: 'none' }}
+                  />
                 </label>
-                <div style={{ textAlign: 'center', fontSize: 12, color: '#bbb' }}>JPG, PNG or PDF — max 10MB</div>
+                <div style={{ textAlign: 'center', fontSize: 12, color: '#bbb' }}>JPG, PNG or PDF · Image automatically optimised before upload</div>
               </div>
             ) : (
               <div>
-                {preview !== 'pdf' ? (
-                  <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #1D9E75', maxHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f0', marginBottom: 12 }}>
-                    <img src={preview} alt="Receipt" style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain' }} />
-                  </div>
-                ) : (
-                  <div style={{ borderRadius: 14, border: '2px solid #1D9E75', padding: '2rem', textAlign: 'center', background: '#E8F8F2', marginBottom: 12 }}>
-                    <div style={{ fontSize: 36, marginBottom: 8 }}>📄</div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{file?.name}</div>
-                  </div>
-                )}
+                <div style={{ borderRadius: 14, overflow: 'hidden', border: '2px solid #1D9E75', maxHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f0', marginBottom: 12 }}>
+                  <img src={preview} alt="Receipt" style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain' }} />
+                </div>
                 <div style={{ background: '#E8F8F2', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#085041', fontWeight: 600, marginBottom: 14, display: 'flex', justifyContent: 'space-between' }}>
-                  <span>✓ Receipt uploaded</span>
+                  <span>✓ Receipt ready</span>
                   <label style={{ fontSize: 12, color: '#0F6E56', cursor: 'pointer', textDecoration: 'underline' }}>
                     Change
                     <input type="file" accept="image/*,application/pdf" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} style={{ display: 'none' }} />
@@ -293,7 +336,7 @@ export default function EnterPage({ params }: { params: { id: string } }) {
               </div>
               <div style={{ background: '#f5f5f0', borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 10, alignItems: 'center', fontSize: 12, color: '#666' }}>
                 <span style={{ fontSize: 20 }}>🧾</span>
-                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file?.name}</span>
+                <span style={{ flex: 1 }}>Receipt ready to submit</span>
                 <button onClick={() => { setFile(null); setPreview(''); setStep('upload') }} style={{ background: 'none', border: 'none', color: '#1D9E75', fontSize: 12, cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}>Change</button>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
@@ -309,12 +352,13 @@ export default function EnterPage({ params }: { params: { id: string } }) {
           </div>
         )}
       </div>
+
       {termsModal && promo?.termsConditions && (
         <div onClick={() => setTermsModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '1rem' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '16px 16px 0 0', padding: '1.5rem', width: '100%', maxWidth: 520, maxHeight: '80vh', overflow: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div style={{ fontSize: 15, fontWeight: 700 }}>Terms & Conditions</div>
-              <button onClick={() => setTermsModal(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#666' }}>x</button>
+              <button onClick={() => setTermsModal(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#666' }}>×</button>
             </div>
             <div style={{ fontSize: 12, color: '#444', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>{promo.termsConditions}</div>
           </div>
