@@ -194,7 +194,10 @@ export default function LaunchPage() {
           <div style={{ fontSize: '15px', color: '#1D9E75', fontWeight: 700 }}>receiptraffle.com/p/{promoSlug}</div>
           <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>Share this link with your customers</div>
         </div>
-        <p style={{ color: '#666', fontSize: '14px', marginBottom: '6px' }}>We will review within 24 hours and send confirmation to <strong>{form.email}</strong>.</p>
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '14px', marginBottom: '16px', textAlign: 'left' }}>
+          <div style={{ fontWeight: 700, fontSize: '13px', color: '#92400e', marginBottom: '6px' }}>💳 Next step: payment required</div>
+          <div style={{ fontSize: '13px', color: '#78350f', lineHeight: 1.6 }}>We will review your submission and send an invoice to <strong>{form.email}</strong> within 24 hours. Your promotion will go live once payment is confirmed.</div>
+        </div>
         <p style={{ color: '#666', fontSize: '14px', marginBottom: '28px' }}>Your PIN: <strong>{form.promoterPin}</strong> — save this for your promoter portal.</p>
         <a href="/promoter" style={{ display: 'block', background: '#1D9E75', color: 'white', padding: '13px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, marginBottom: '10px' }}>Go to Promoter Portal →</a>
         <a href="/" style={{ display: 'block', color: '#1D9E75', padding: '10px', textDecoration: 'none' }}>Back to home</a>
@@ -333,8 +336,8 @@ export default function LaunchPage() {
                 ))}
               </div>
               {form.entryBudgetTier && (
-                <div style={{ marginTop: '12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#15803d' }}>
-                  First 500 entries included free. Additional entries at $10 per 1,000. Our team will confirm your exact pricing on review.
+                <div style={{ marginTop: '12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#92400e' }}>
+                  💳 Our team will confirm your invoice within 24 hours of submission. Your promotion goes live once payment is received. AI verification charges of $10 per 1,000 entries (above your tier limit) are billed monthly based on actual usage.
                 </div>
               )}
             </div>
@@ -385,6 +388,11 @@ export default function LaunchPage() {
             <textarea style={{ ...inp, minHeight: '300px', fontFamily: 'monospace', fontSize: '13px', resize: 'vertical' }} value={form.termsConditions} onChange={e => set('termsConditions', e.target.value)} />
           </>}
 
+          {step === 4 && (
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 14px', fontSize: '13px', color: '#92400e', marginTop: '14px' }}>
+              💳 <strong>Payment note:</strong> By submitting, you agree that your promotion will only go live after payment of your invoice. We will contact you at <strong>{form.email}</strong> within 24 hours with payment details.
+            </div>
+          )}
           {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '12px', color: '#dc2626', fontSize: '14px', marginTop: '14px' }}>{error}</div>}
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '28px' }}>
