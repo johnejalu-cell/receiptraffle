@@ -208,6 +208,39 @@ export default function ForBusinessPage() {
           </p>
         </div>
 
+        {/* Grand Draw */}
+        <div style={{ padding: '56px 0 0' }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#7c3aed', letterSpacing: '1px', marginBottom: '8px' }}>GRAND DRAWS</div>
+          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#111', margin: '0 0 16px' }}>Supercharge your promotion with a shared grand prize</h2>
+          <p style={{ color: '#666', fontSize: '15px', lineHeight: 1.7, marginBottom: '32px' }}>
+            ReceiptRaffle periodically organises cooperative Grand Draw events where multiple non-competing promoters pool their entry pipelines into a single shared draw for a high-value prize — such as a car, luxury travel or a large cash prize.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+            {[
+              ['🏆', 'High-value shared prize', 'The grand prize is funded cooperatively, making it far more valuable than any single promoter could offer alone — dramatically increasing customer participation.'],
+              ['🔗', 'Your promotion stays independent', 'You run your own promotion with your own prizes and branding. Grand draw entry is automatic for every verified receipt — no extra steps for your customers.'],
+              ['📈', 'Double the incentive', 'Every customer who enters your promotion also gets a ticket in the grand draw. One receipt, two chances to win — which drives significantly higher entry rates.'],
+              ['🤝', 'Non-competing categories', 'Grand draws are structured so promoters do not compete with each other. A fuel station, a supermarket and a pharmacy can all participate without conflict.'],
+            ].map(([icon, title, desc]) => (
+              <div key={title as string} style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderTop: '3px solid #7c3aed' }}>
+                <div style={{ fontSize: '28px', marginBottom: '10px' }}>{icon}</div>
+                <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px', color: '#111' }}>{title}</div>
+                <div style={{ color: '#666', fontSize: '14px', lineHeight: 1.5 }}>{desc}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)', border: '2px solid #c4b5fd', borderRadius: '16px', padding: '32px', textAlign: 'center' }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🏆</div>
+            <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#5b21b6', marginBottom: '8px' }}>Interested in joining a Grand Draw?</h3>
+            <p style={{ color: '#6d28d9', fontSize: '14px', lineHeight: 1.7, marginBottom: '24px', maxWidth: '480px', margin: '0 auto 24px' }}>
+              Grand draw participation is by special arrangement only and is subject to category availability. Promoters must already have an active promotion running on ReceiptRaffle. Contact us to find out about upcoming grand draw events and availability in your category.
+            </p>
+            <a href={`mailto:${c.contact_email}?subject=Grand Draw Enquiry`} style={{ display: 'inline-block', background: '#7c3aed', color: 'white', padding: '14px 28px', borderRadius: '10px', textDecoration: 'none', fontWeight: 700, fontSize: '15px' }}>
+              Enquire about Grand Draws →
+            </a>
+          </div>
+        </div>
+
         {/* CTA */}
         <div style={{ padding: '56px 0', textAlign: 'center' }}>
           <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#111', marginBottom: '12px' }}>{c.biz_cta_title}</h2>
