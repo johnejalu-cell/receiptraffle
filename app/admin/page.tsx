@@ -1,6 +1,38 @@
 'use client'
 import { useState } from 'react'
 
+const TIER_RATES: Record<string, {label: string, standard: number, emerging: number}> = {
+  starter: { label: 'Starter (up to 500/mo)', standard: 129, emerging: 51 },
+  growth: { label: 'Growth (up to 2,000/mo)', standard: 259, emerging: 103 },
+  professional: { label: 'Professional (up to 5,000/mo)', standard: 454, emerging: 181 },
+  enterprise: { label: 'Enterprise (up to 20,000/mo)', standard: 779, emerging: 311 },
+  custom: { label: 'Custom (20,000+)', standard: 0, emerging: 0 },
+}
+const EMERGING_COUNTRIES = ['UG','KE','NG','GH','TZ','RW','ZM','ZW','SN','CI','CM','ET','MA','EG','IN','BD','PK','PH','ID']
+
+function TierBadge({ tier, country }: { tier: string, country?: string }) {
+  const t = TIER_RATES[tier]
+  if (!t) return null
+  const isEmerging = EMERGING_COUNTRIES.includes(country || '')
+  const rate = isEmerging ? t.emerging : t.standard
+  return (
+    <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: '10px 14px', marginBottom: 10 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d', marginBottom: 4 }}>💰 Pricing tier: {t.label}</div>
+      <div style={{ fontSize: 12, color: '#166534' }}>
+        Rate: <strong>USD {rate}/month</strong> {isEmerging ? '(emerging market)' : '(standard)'}{country ? ` · ${country}` : ''}
+      </div>
+      {rate > 0 && (
+        <div style={{ fontSize: 12, color: '#166534', marginTop: 2 }}>
+          Invoice: <strong>USD {rate}/month + $10 per 1,000 entries above tier limit</strong>
+        </div>
+      )}
+      {tier === 'custom' && (
+        <div style={{ fontSize: 12, color: '#92400e', marginTop: 2 }}>Custom tier — agree pricing with promoter before activating.</div>
+      )}
+    </div>
+  )
+}
+
 export default function AdminPage() {
   const [tab, setTab] = useState('overview')
   const [pin, setPin] = useState('')
@@ -303,40 +335,11 @@ export default function AdminPage() {
                   <div>Microsite: <strong>{s.slug ? `/p/${s.slug}` : 'Not set'}</strong></div>
                 </div>
                 {/* Entry budget tier and invoice amount */}
-                {s.entry_budget_tier && (() => {
-                  const tierRates: Record<string, {label: string, standard: number, emerging: number}> = {
-                    starter: { label: 'Starter (up to 500/mo)', standard: 129, emerging: 51 },
-                    growth: { label: 'Growth (up to 2,000/mo)', standard: 259, emerging: 103 },
-                    professional: { label: 'Professional (up to 5,000/mo)', standard: 454, emerging: 181 },
-                    enterprise: { label: 'Enterprise (up to 20,000/mo)', standard: 779, emerging: 311 },
-                    custom: { label: 'Custom (20,000+)', standard: 0, emerging: 0 },
-                  }
-                  const tier = tierRates[s.entry_budget_tier]
-                  const isEmerging = ['UG','KE','NG','GH','TZ','RW','ZM','ZW','SN','CI','CM','ET','MA','EG','IN','BD','PK','PH','ID'].includes(s.country || '')
-                  const monthlyRate = tier ? (isEmerging ? tier.emerging : tier.standard) : 0
-                  return (
-                    <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10, padding: '10px 14px', marginBottom: 10 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d', marginBottom: 4 }}>💰 Pricing tier: {tier?.label || s.entry_budget_tier}</div>
-                      <div style={{ fontSize: 12, color: '#166534' }}>
-                        Rate: <strong>USD {monthlyRate}/month</strong>
-                        {isEmerging ? ' (emerging market rate)' : ' (standard rate)'}
-                        {s.country ? ` · ${s.country}` : ''}
-                      </div>
-                      {monthlyRate > 0 && (
-                        <div style={{ fontSize: 12, color: '#166534', marginTop: 2 }}>
-                          Invoice to send: <strong>USD {monthlyRate}/month + $10 per 1,000 entries above tier limit</strong>
-                        </div>
-                      )}
-                      {s.entry_budget_tier === 'custom' && (
-                        <div style={{ fontSize: 12, color: '#92400e', marginTop: 2 }}>Custom tier — contact promoter to agree pricing before activating.</div>
-                      )}
-                    </div>
-                  )
-                })()}
-                    </div>
-                  )
-                })()}
+                {s.entry_budget_tier && (
+                  <TierBadge tier={s.entry_budget_tier} country={s.country} />
+                )}
                 <div style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>Prizes: {Array.isArray(s.prizes) ? s.prizes.join(' · ') : s.prizes}</div>
+                {s.status === 'pending' && (
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => activateSubmission(s.id)} style={{ flex: 1, padding: '10px', background: '#E1F5EE', color: '#085041', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>✓ Activate</button>
                     <button onClick={() => declineSubmission(s.id)} style={{ flex: 1, padding: '10px', background: '#FCEBEB', color: '#791F1F', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>✗ Decline</button>
