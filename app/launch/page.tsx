@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const CURRENCIES = ['UGX','KES','TZS','USD','GBP','EUR','ZAR','NGN','GHS']
 const EMOJIS = ['🛍','🎁','🏆','🎯','💰','🎉','🛒','⭐','🔥','💎']
@@ -47,13 +47,15 @@ const COUNTRIES = [
   { code: 'ZW', name: 'Zimbabwe', flag: '🇿🇼' },
 ]
 
-const TIERS = [
-  { value: 'starter', label: 'Starter — up to 500 entries/month', standard: '$129/mo', emerging: '$51/mo' },
-  { value: 'growth', label: 'Growth — up to 2,000 entries/month', standard: '$259/mo', emerging: '$103/mo' },
-  { value: 'professional', label: 'Professional — up to 5,000 entries/month', standard: '$454/mo', emerging: '$181/mo' },
-  { value: 'enterprise', label: 'Enterprise — up to 20,000 entries/month', standard: '$779/mo', emerging: '$311/mo' },
-  { value: 'custom', label: 'Custom — more than 20,000 entries/month', standard: 'Quote', emerging: 'Quote' },
+const DEFAULT_TIERS = [
+  { value: 'starter', label: 'Starter — up to 500 entries/month', stdRate: 129, emRate: 51 },
+  { value: 'growth', label: 'Growth — up to 2,000 entries/month', stdRate: 259, emRate: 103 },
+  { value: 'professional', label: 'Professional — up to 5,000 entries/month', stdRate: 454, emRate: 181 },
+  { value: 'enterprise', label: 'Enterprise — up to 20,000 entries/month', stdRate: 779, emRate: 311 },
+  { value: 'custom', label: 'Custom — more than 20,000 entries/month', stdRate: 0, emRate: 0 },
 ]
+
+const EMERGING_COUNTRIES = ['UG','KE','NG','GH','TZ','RW','ZM','ZW','SN','CI','CM','ET','MA','EG','IN','BD','PK','PH','ID']
 
 interface Prize { position: string; description: string }
 
@@ -70,6 +72,8 @@ export default function LaunchPage() {
   const [showCountryDropdown, setShowCountryDropdown] = useState(false)
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null)
   const [checkingSlug, setCheckingSlug] = useState(false)
+  const [tiers, setTiers] = useState(DEFAULT_TIERS)
+  const [overageRate, setOverageRate] = useState(10)
   const [form, setForm] = useState({
     companyName: '', contactName: '', email: '', phone: '',
     country: '', countryDisplay: '', slug: '',
@@ -83,6 +87,25 @@ export default function LaunchPage() {
 
   const set = (k: string, v: string | string[] | File | null) =>
     setForm(p => ({ ...p, [k]: v }))
+
+  // Fetch live rates from admin settings
+  useEffect(() => {
+    fetch('/api/content')
+      .then(r => r.json())
+      .then(d => {
+        if (!d.content) return
+        const c = d.content
+        setTiers([
+          { value: 'starter', label: 'Starter — up to 500 entries/month', stdRate: parseInt(c.tier_starter_standard) || 129, emRate: parseInt(c.tier_starter_emerging) || 51 },
+          { value: 'growth', label: 'Growth — up to 2,000 entries/month', stdRate: parseInt(c.tier_growth_standard) || 259, emRate: parseInt(c.tier_growth_emerging) || 103 },
+          { value: 'professional', label: 'Professional — up to 5,000 entries/month', stdRate: parseInt(c.tier_professional_standard) || 454, emRate: parseInt(c.tier_professional_emerging) || 181 },
+          { value: 'enterprise', label: 'Enterprise — up to 20,000 entries/month', stdRate: parseInt(c.tier_enterprise_standard) || 779, emRate: parseInt(c.tier_enterprise_emerging) || 311 },
+          { value: 'custom', label: 'Custom — more than 20,000 entries/month', stdRate: 0, emRate: 0 },
+        ])
+        if (c.tier_overage) setOverageRate(parseInt(c.tier_overage) || 10)
+      })
+      .catch(() => {})
+  }, [])
 
   const handleLogo = (file: File | null) => {
     set('logo', file)
@@ -325,19 +348,24 @@ export default function LaunchPage() {
               <label style={lbl}>How many entries do you wish to budget for? *</label>
               <p style={{ fontSize: '13px', color: '#888', marginBottom: '10px' }}>This sets your pricing tier. If unsure, start with Starter.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {TIERS.map(tier => (
-                  <div key={tier.value} onClick={() => set('entryBudgetTier', tier.value)} style={{ border: `2px solid ${form.entryBudgetTier === tier.value ? '#1D9E75' : '#e5e7eb'}`, borderRadius: '10px', padding: '12px 16px', cursor: 'pointer', background: form.entryBudgetTier === tier.value ? '#f0fdf4' : 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '14px', color: '#111' }}>{tier.label}</div>
-                      <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>Standard: {tier.standard} · Emerging: {tier.emerging}</div>
+                {tiers.map(tier => {
+                  const isEmerging = EMERGING_COUNTRIES.includes(form.country)
+                  const rate = tier.stdRate === 0 ? null : (isEmerging ? tier.emRate : tier.stdRate)
+                  const rateLabel = tier.value === 'custom' ? 'Quote' : `$${rate}/mo${isEmerging ? ' (emerging rate)' : ''}`
+                  return (
+                    <div key={tier.value} onClick={() => set('entryBudgetTier', tier.value)} style={{ border: `2px solid ${form.entryBudgetTier === tier.value ? '#1D9E75' : '#e5e7eb'}`, borderRadius: '10px', padding: '12px 16px', cursor: 'pointer', background: form.entryBudgetTier === tier.value ? '#f0fdf4' : 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '14px', color: '#111' }}>{tier.label}</div>
+                        <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>{rateLabel}</div>
+                      </div>
+                      {form.entryBudgetTier === tier.value && <div style={{ color: '#1D9E75', fontWeight: 700, fontSize: '18px', flexShrink: 0 }}>✓</div>}
                     </div>
-                    {form.entryBudgetTier === tier.value && <div style={{ color: '#1D9E75', fontWeight: 700, fontSize: '18px', flexShrink: 0 }}>✓</div>}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
               {form.entryBudgetTier && (
                 <div style={{ marginTop: '12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#92400e' }}>
-                  💳 Our team will confirm your invoice within 24 hours of submission. Your promotion goes live once payment is received. AI verification charges of $10 per 1,000 entries (above your tier limit) are billed monthly based on actual usage.
+                  💳 Our team will confirm your invoice within 24 hours of submission. Your promotion goes live once payment is received. AI verification charges of ${overageRate} per 1,000 entries above your tier limit are billed monthly based on actual usage.
                 </div>
               )}
             </div>
