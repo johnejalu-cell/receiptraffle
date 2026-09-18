@@ -295,7 +295,7 @@ export default function PromoterPage() {
           <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
             <div>
               <div style={{ fontWeight: 600, fontSize: '13px', color: '#15803d' }}>🔗 Your promotion microsite</div>
-              <div style={{ fontSize: '12px', color: '#166534' }}>receiptraffle.com/p/{selectedPromo.slug}</div>
+              <div style={{ fontSize: '12px', color: '#166534' }}>{typeof window !== 'undefined' ? window.location.host : 'receiptraffle.com'}/p/{selectedPromo.slug}</div>
             </div>
             <a href={`/p/${selectedPromo.slug}`} target="_blank" rel="noreferrer" style={{ background: '#1D9E75', color: 'white', padding: '8px 14px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, fontSize: '12px', whiteSpace: 'nowrap' }}>View page →</a>
           </div>
