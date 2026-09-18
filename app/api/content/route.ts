@@ -11,6 +11,11 @@ const CONTENT_KEYS = [
   'biz_pricing_amount', 'biz_pricing_note',
   'biz_cta_title', 'biz_cta_subtitle',
   'contact_email',
+  'tier_starter_standard', 'tier_starter_emerging',
+  'tier_growth_standard', 'tier_growth_emerging',
+  'tier_professional_standard', 'tier_professional_emerging',
+  'tier_enterprise_standard', 'tier_enterprise_emerging',
+  'tier_overage', 'payment_instructions',
 ]
 
 function parseValue(v: unknown): string {
