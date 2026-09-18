@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const TIER_RATES: Record<string, {label: string, standard: number, emerging: number}> = {
   starter: { label: 'Starter (up to 500/mo)', standard: 129, emerging: 51 },
@@ -29,6 +29,131 @@ function TierBadge({ tier, country }: { tier: string, country?: string }) {
       {tier === 'custom' && (
         <div style={{ fontSize: 12, color: '#92400e', marginTop: 2 }}>Custom tier — agree pricing with promoter before activating.</div>
       )}
+    </div>
+  )
+}
+
+const TIER_DEFS = [
+  { key: 'starter', label: 'Starter', entries: 'up to 500/mo', stdKey: 'tier_starter_standard', emKey: 'tier_starter_emerging', stdDefault: '129', emDefault: '51' },
+  { key: 'growth', label: 'Growth', entries: 'up to 2,000/mo', stdKey: 'tier_growth_standard', emKey: 'tier_growth_emerging', stdDefault: '259', emDefault: '103' },
+  { key: 'professional', label: 'Professional', entries: 'up to 5,000/mo', stdKey: 'tier_professional_standard', emKey: 'tier_professional_emerging', stdDefault: '454', emDefault: '181' },
+  { key: 'enterprise', label: 'Enterprise', entries: 'up to 20,000/mo', stdKey: 'tier_enterprise_standard', emKey: 'tier_enterprise_emerging', stdDefault: '779', emDefault: '311' },
+]
+
+function FeesTab() {
+  const [rates, setRates] = useState<Record<string, string>>({
+    tier_starter_standard: '129', tier_starter_emerging: '51',
+    tier_growth_standard: '259', tier_growth_emerging: '103',
+    tier_professional_standard: '454', tier_professional_emerging: '181',
+    tier_enterprise_standard: '779', tier_enterprise_emerging: '311',
+    tier_overage: '10',
+  })
+  const [paymentInstructions, setPaymentInstructions] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [loadingFees, setLoadingFees] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/content')
+      .then(r => r.json())
+      .then(d => {
+        if (d.content) {
+          const updates: Record<string, string> = {}
+          Object.keys(rates).forEach(k => {
+            if (d.content[k]) updates[k] = d.content[k]
+          })
+          if (Object.keys(updates).length) setRates(r => ({ ...r, ...updates }))
+          if (d.content.payment_instructions) setPaymentInstructions(d.content.payment_instructions)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingFees(false))
+  }, [])
+
+  const setRate = (key: string, val: string) => setRates(r => ({ ...r, [key]: val }))
+
+  const saveAll = async () => {
+    setSaving(true); setSaved(false)
+    try {
+      const updates: Record<string, string> = { ...rates, payment_instructions: paymentInstructions }
+      const res = await fetch('/api/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Save failed')
+    } finally { setSaving(false) }
+  }
+
+  if (loadingFees) return <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>Loading rates...</div>
+
+  return (
+    <div>
+      <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Pricing & Fee Management</p>
+      <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>All rates are in USD. Changes here update the rates shown on the launch form immediately.</p>
+
+      {/* Tier rates */}
+      <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 16 }}>
+        <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Monthly tier rates (USD)</p>
+        <p style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Standard = developed markets · Emerging = Africa, South Asia, Southeast Asia</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {TIER_DEFS.map(tier => (
+            <div key={tier.key} style={{ background: '#f9fafb', borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#333', marginBottom: 8 }}>{tier.label} <span style={{ color: '#888', fontWeight: 400 }}>({tier.entries})</span></div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 3 }}>Standard (USD/mo)</label>
+                  <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d0d0c8', borderRadius: 8, background: '#fff', overflow: 'hidden' }}>
+                    <span style={{ padding: '8px 6px 8px 10px', color: '#888', fontSize: 13 }}>$</span>
+                    <input type="number" value={rates[tier.stdKey]} onChange={e => setRate(tier.stdKey, e.target.value)}
+                      style={{ flex: 1, padding: '8px 8px 8px 2px', border: 'none', outline: 'none', fontSize: 14, background: 'transparent' }} />
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 3 }}>Emerging (USD/mo)</label>
+                  <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d0d0c8', borderRadius: 8, background: '#fff', overflow: 'hidden' }}>
+                    <span style={{ padding: '8px 6px 8px 10px', color: '#888', fontSize: 13 }}>$</span>
+                    <input type="number" value={rates[tier.emKey]} onChange={e => setRate(tier.emKey, e.target.value)}
+                      style={{ flex: 1, padding: '8px 8px 8px 2px', border: 'none', outline: 'none', fontSize: 14, background: 'transparent' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Overage rate */}
+        <div style={{ marginTop: 14 }}>
+          <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>AI verification overage (USD per 1,000 entries above tier limit)</label>
+          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d0d0c8', borderRadius: 8, background: '#fff', overflow: 'hidden', maxWidth: 180 }}>
+            <span style={{ padding: '10px 6px 10px 12px', color: '#888', fontSize: 13 }}>$</span>
+            <input type="number" value={rates.tier_overage} onChange={e => setRate('tier_overage', e.target.value)}
+              style={{ flex: 1, padding: '10px 4px 10px 2px', border: 'none', outline: 'none', fontSize: 14, background: 'transparent' }} />
+            <span style={{ padding: '10px 10px 10px 2px', color: '#888', fontSize: 11 }}>/ 1k entries</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Payment instructions */}
+      <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 16 }}>
+        <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Payment instructions</p>
+        <p style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>Shown to promoters after they submit their promotion.</p>
+        <input type="text" value={paymentInstructions} onChange={e => setPaymentInstructions(e.target.value)}
+          placeholder="e.g. Pay via bank transfer to: Bank Name, Account: 1234567, Ref: your promotion reference"
+          style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff', boxSizing: 'border-box' }} />
+      </div>
+
+      {saved && <div style={{ background: '#E1F5EE', border: '1px solid #9FE1CB', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#085041', fontWeight: 600, marginBottom: 12 }}>✓ Saved! Rates are now live on the launch form.</div>}
+
+      <button onClick={saveAll} disabled={saving}
+        style={{ width: '100%', padding: '13px', background: saving ? '#9BA4B5' : '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+        {saving ? 'Saving...' : '💾 Save all rates & instructions'}
+      </button>
     </div>
   )
 }
@@ -546,80 +671,7 @@ export default function AdminPage() {
 
         {/* FEES */}
         {tab === 'fees' && !loading && (
-          <div>
-            <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Pricing & Fee Management</p>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 20 }}>All rates are in USD. These rates are shown to promoters on the for-business page and launch form.</p>
-
-            {/* Tier rates */}
-            <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 16 }}>
-              <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Monthly tier rates (USD)</p>
-              <p style={{ fontSize: 12, color: '#888', marginBottom: 16 }}>Standard = developed markets · Emerging = Africa, South Asia, Southeast Asia</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {[
-                  { key: 'starter', label: 'Starter (up to 500 entries/mo)', stdKey: 'tier_starter_standard', emKey: 'tier_starter_emerging', stdDefault: '129', emDefault: '51' },
-                  { key: 'growth', label: 'Growth (up to 2,000 entries/mo)', stdKey: 'tier_growth_standard', emKey: 'tier_growth_emerging', stdDefault: '259', emDefault: '103' },
-                  { key: 'professional', label: 'Professional (up to 5,000 entries/mo)', stdKey: 'tier_professional_standard', emKey: 'tier_professional_emerging', stdDefault: '454', emDefault: '181' },
-                  { key: 'enterprise', label: 'Enterprise (up to 20,000 entries/mo)', stdKey: 'tier_enterprise_standard', emKey: 'tier_enterprise_emerging', stdDefault: '779', emDefault: '311' },
-                ].map(tier => (
-                  <div key={tier.key} style={{ background: '#f9fafb', borderRadius: 10, padding: '12px 14px' }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#333', marginBottom: 8 }}>{tier.label}</div>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      <div style={{ flex: 1 }}>
-                        <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 3 }}>Standard (USD/mo)</label>
-                        <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d0d0c8', borderRadius: 8, background: '#fff', overflow: 'hidden' }}>
-                          <span style={{ padding: '8px 8px 8px 10px', color: '#888', fontSize: 13 }}>$</span>
-                          <input type="number" defaultValue={tier.stdDefault} id={tier.stdKey}
-                            style={{ flex: 1, padding: '8px 8px 8px 2px', border: 'none', outline: 'none', fontSize: 14, background: 'transparent' }} />
-                        </div>
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 3 }}>Emerging (USD/mo)</label>
-                        <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d0d0c8', borderRadius: 8, background: '#fff', overflow: 'hidden' }}>
-                          <span style={{ padding: '8px 8px 8px 10px', color: '#888', fontSize: 13 }}>$</span>
-                          <input type="number" defaultValue={tier.emDefault} id={tier.emKey}
-                            style={{ flex: 1, padding: '8px 8px 8px 2px', border: 'none', outline: 'none', fontSize: 14, background: 'transparent' }} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ marginTop: 14 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>AI verification overage rate (USD per 1,000 entries)</label>
-                <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d0d0c8', borderRadius: 8, background: '#fff', overflow: 'hidden', maxWidth: 160 }}>
-                  <span style={{ padding: '10px 8px 10px 12px', color: '#888', fontSize: 13 }}>$</span>
-                  <input type="number" defaultValue="10" id="tier_overage"
-                    style={{ flex: 1, padding: '10px 8px 10px 2px', border: 'none', outline: 'none', fontSize: 14, background: 'transparent' }} />
-                  <span style={{ padding: '10px 10px 10px 4px', color: '#888', fontSize: 11 }}>/ 1k</span>
-                </div>
-              </div>
-              <div style={{ background: '#E6F1FB', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#0C447C', marginTop: 12 }}>
-                ℹ️ Rate changes here are for your reference and invoicing. To update the rates shown on the website, please update the for-business page file directly (rates are currently hardcoded in the page).
-              </div>
-            </div>
-
-            {/* Payment instructions */}
-            <div style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 12 }}>
-              <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Payment instructions</p>
-              <p style={{ fontSize: 12, color: '#888', marginBottom: 14 }}>Shown to promoters in their invoice email. Keep this up to date.</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>Payment details / instructions</label>
-                  <input type="text" value={feeForm.description} onChange={e => setFeeForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Pay via bank transfer to Account: 1234567, Sort: 00-00-00, Ref: your promotion reference"
-                    style={{ width: '100%', padding: '12px 14px', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 14, background: '#fff' }} />
-                </div>
-                <button onClick={saveFee} disabled={feeSaving}
-                  style={{ width: '100%', padding: '12px', background: feeSaving ? '#9BA4B5' : feeSaved ? '#085041' : '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: feeSaving ? 'not-allowed' : 'pointer' }}>
-                  {feeSaving ? 'Saving...' : feeSaved ? 'Saved!' : 'Save payment instructions'}
-                </button>
-              </div>
-            </div>
-            {fee?.description && (
-              <div style={{ background: '#E8F8F2', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: '#085041' }}>
-                Current: <strong>{fee.description}</strong>
-              </div>
-            )}
-          </div>
+          <FeesTab />
         )}
       </div>
 
