@@ -81,7 +81,7 @@ export default function PromotionMicrosite() {
           {/* Grand draw badge */}
           {promotion.grand_draw_id && promotion.grand_draw_name && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.2)', borderRadius: '20px', padding: '8px 16px', fontSize: '13px', marginBottom: '16px', fontWeight: 600 }}>
-              🏆 Also entered into: {promotion.grand_draw_name}
+              🏆 GRAND DRAW: {promotion.grand_draw_name}
             </div>
           )}
 
@@ -151,7 +151,7 @@ export default function PromotionMicrosite() {
           <div style={{ background: 'linear-gradient(135deg, #7c3aed11, #7c3aed22)', border: '2px solid #7c3aed44', borderRadius: '16px', padding: '24px', marginBottom: '20px' }}>
             <h2 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '8px', color: '#5b21b6' }}>🏆 Grand Draw</h2>
             <p style={{ color: '#6d28d9', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>
-              Every verified entry into this promotion also earns you a ticket in the <strong>{promotion.grand_draw_name}</strong>. One receipt, two chances to win!
+              Every verified entry into this promotion also earns you a ticket in the <strong>{promotion.grand_draw_name}</strong> Grand Draw. One receipt, two chances to win!
             </p>
           </div>
         )}
