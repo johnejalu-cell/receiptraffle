@@ -214,8 +214,8 @@ export default function LaunchPage() {
         <div style={{ background: '#f0fdf4', border: '2px solid #1D9E75', borderRadius: '8px', padding: '14px', fontSize: '20px', fontWeight: 700, color: '#1D9E75', letterSpacing: '2px', marginBottom: '20px' }}>{promoRef}</div>
         <div style={{ background: '#f9fafb', borderRadius: '10px', padding: '14px', marginBottom: '16px', textAlign: 'left' }}>
           <div style={{ fontSize: '13px', color: '#888', marginBottom: '4px', fontWeight: 600 }}>YOUR PROMOTION MICROSITE (live once approved)</div>
-          <div style={{ fontSize: '15px', color: '#1D9E75', fontWeight: 700 }}>receiptraffle.com/p/{promoSlug}</div>
-          <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>Share this link with your customers</div>
+          <div style={{ fontSize: '15px', color: '#1D9E75', fontWeight: 700 }}>{typeof window !== 'undefined' ? window.location.host : 'receiptraffle.com'}/p/{promoSlug}</div>
+          <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>Share this link with your customers once your promotion goes live</div>
         </div>
         <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '14px', marginBottom: '16px', textAlign: 'left' }}>
           <div style={{ fontWeight: 700, fontSize: '13px', color: '#92400e', marginBottom: '6px' }}>💳 Next step: payment required</div>
