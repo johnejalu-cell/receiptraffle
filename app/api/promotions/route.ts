@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
     const color = formData.get('color') as string || '#1D9E75'
     const country = formData.get('country') as string || ''
     const entryBudgetTier = formData.get('entryBudgetTier') as string || ''
+    const slug = (formData.get('slug') as string || '').toLowerCase().trim()
     const logoFile = formData.get('logo') as File | null
 
     let productBarcodes: string[] = []
@@ -135,6 +136,7 @@ export async function POST(req: NextRequest) {
         color,
         country: country || null,
         entry_budget_tier: entryBudgetTier || null,
+        slug: slug || null,
         logo_url: logoUrl,
         ref,
         status: 'pending',
@@ -145,7 +147,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, ref })
+    return NextResponse.json({ success: true, ref, slug: slug || null })
   } catch (err: unknown) {
     console.error('[promotions] Fatal error:', err instanceof Error ? err.message : String(err))
     return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 })
