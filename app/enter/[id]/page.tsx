@@ -5,7 +5,7 @@ import Link from 'next/link'
 export default function EnterPage({ params }: { params: { id: string } }) {
   const [promo, setPromo] = useState<any>(null)
   const [promoLoaded, setPromoLoaded] = useState(false)
-  const [step, setStep] = useState<'upload' | 'details' | 'verifying' | 'success' | 'manual'>('upload')
+  const [step, setStep] = useState<'upload' | 'details' | 'verifying' | 'success' | 'manual' | 'duplicate'>('upload')
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState('')
   const [name, setName] = useState('')
@@ -139,6 +139,14 @@ export default function EnterPage({ params }: { params: { id: string } }) {
       })
 
       const data = await res.json()
+
+      // Handle duplicate receipt specifically
+      if (res.status === 409 && data.error === 'duplicate_receipt') {
+        setStep('duplicate')
+        setResult({ duplicatePromotion: data.promotionName, message: data.message })
+        return
+      }
+
       if (data.error) throw new Error(data.error)
       setResult(data.aiResult)
       setTicket(data.ticketNumber)
@@ -182,6 +190,31 @@ export default function EnterPage({ params }: { params: { id: string } }) {
         Save your ticket number! You will be contacted on <strong>{phone}</strong> if you win.
       </p>
       <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>← Back to promotions</Link>
+    </main>
+  )
+
+  if (step === 'duplicate') return (
+    <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#fafaf9', textAlign: 'center' }}>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>🧾</div>
+      <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8, color: '#791F1F' }}>Receipt already used</h2>
+      <div style={{ background: '#FCEBEB', border: '1px solid #f5c6c6', borderRadius: 14, padding: '16px 20px', maxWidth: 340, width: '100%', marginBottom: 24, textAlign: 'left' }}>
+        <div style={{ fontSize: 14, color: '#791F1F', lineHeight: 1.6 }}>
+          This receipt has already been used to enter a <strong>{promo?.title?.split(' ')[0] || 'brand'}</strong> promotion
+          {result?.duplicatePromotion ? ` (${result.duplicatePromotion})` : ''}.
+          Each receipt can only be used once per brand.
+        </div>
+      </div>
+      <div style={{ background: '#E8F8F2', border: '1px solid #9FE1CB', borderRadius: 14, padding: '16px 20px', maxWidth: 340, width: '100%', marginBottom: 28, textAlign: 'left' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#085041', marginBottom: 6 }}>What you can do:</div>
+        <div style={{ fontSize: 13, color: '#0F6E56', lineHeight: 1.7 }}>
+          ✓ Use a different receipt from a new purchase<br />
+          ✓ Use this receipt to enter a promotion for a different brand
+        </div>
+      </div>
+      <button onClick={() => { setStep('upload'); setFile(null); setPreview('') }} style={{ padding: '12px 28px', background: '#1D9E75', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 16 }}>
+        Try a different receipt
+      </button>
+      <Link href="/" style={{ color: '#1D9E75', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>← Browse other promotions</Link>
     </main>
   )
 
