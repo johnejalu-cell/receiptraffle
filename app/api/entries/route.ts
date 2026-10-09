@@ -1,4 +1,4 @@
-// v18.1 - content-fingerprint duplicate detection + Supabase client type fix
+// v19 - duplicate detection by receipt contents (total + retailer + date / receipt no.)
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
@@ -40,9 +40,13 @@ interface AiResult {
 
 interface PriorEntry {
   id: string | number
+  ticket_number: string | null
   promotion_id: string | number | null
   promotion_name: string | null
   retailer: string | null
+  receipt_number: string | null
+  receipt_date: string | null
+  ai_result: unknown
 }
 
 interface PromoRow {
@@ -54,7 +58,10 @@ interface PromoRow {
 interface BlockInfo {
   promoName: string
   brand: string
+  ticket: string
 }
+
+const ENTRY_COLS = 'id, ticket_number, promotion_id, promotion_name, retailer, receipt_number, receipt_date, ai_result'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -97,11 +104,6 @@ function normText(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
-function isoDate(s: string): string {
-  const m = s.trim().match(/^(\d{4})-(\d{2})-(\d{2})/)
-  return m ? `${m[1]}-${m[2]}-${m[3]}` : ''
-}
-
 // Two reads of the same receipt may name the store slightly differently
 function retailerSimilar(a: string | null, b: string | null): boolean {
   const na = normText(a || '')
@@ -110,10 +112,68 @@ function retailerSimilar(a: string | null, b: string | null): boolean {
   return na.slice(0, 5) === nb.slice(0, 5) || na.includes(nb) || nb.includes(na)
 }
 
-function buildFingerprint(r: AiResult): string | null {
-  const date = isoDate(r.date)
-  if (!date || r.total_amount <= 0) return null
-  return `${date}|${r.total_amount.toFixed(2)}`
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+
+function pad(n: number): string {
+  return n < 10 ? '0' + n : String(n)
+}
+
+function mkDate(y: number, m: number, d: number): string | null {
+  if (!y || m < 1 || m > 12 || d < 1 || d > 31) return null
+  return `${y}-${pad(m)}-${pad(d)}`
+}
+
+function fullYear(y: string): number {
+  const n = parseInt(y, 10)
+  return y.length <= 2 ? 2000 + n : n
+}
+
+// Returns every plausible YYYY-MM-DD reading of a date string (tolerates day/month swaps)
+function dateKeys(raw: string): string[] {
+  const s = (raw || '').trim().toLowerCase()
+  if (!s) return []
+  const out: (string | null)[] = []
+
+  const iso = s.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/)
+  const dmy = iso ? null : s.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/)
+  const dMonY = iso || dmy ? null : s.match(/(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]{3})[a-z]*\.?,?\s+(\d{2,4})/)
+  const monDY = iso || dmy || dMonY ? null : s.match(/([a-z]{3})[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{2,4})/)
+
+  if (iso) {
+    const y = +iso[1], a = +iso[2], b = +iso[3]
+    out.push(mkDate(y, a, b), mkDate(y, b, a))
+  } else if (dmy) {
+    const y = fullYear(dmy[3]), a = +dmy[1], b = +dmy[2]
+    out.push(mkDate(y, b, a), mkDate(y, a, b))
+  } else if (dMonY) {
+    const mi = MONTHS.indexOf(dMonY[2]) + 1
+    if (mi) out.push(mkDate(fullYear(dMonY[3]), mi, +dMonY[1]))
+  } else if (monDY) {
+    const mi = MONTHS.indexOf(monDY[1]) + 1
+    if (mi) out.push(mkDate(fullYear(monDY[3]), mi, +monDY[2]))
+  }
+  return Array.from(new Set(out.filter((x): x is string => !!x)))
+}
+
+type MatchKind = 'same' | 'possible' | 'different'
+
+// Decide whether a prior entry (already known to have the same total) is the same physical receipt
+function compareReceipt(current: AiResult, prior: PriorEntry): MatchKind {
+  if (!retailerSimilar(prior.retailer, current.retailer)) return 'different'
+
+  const priorAi = (prior.ai_result && typeof prior.ai_result === 'object' ? prior.ai_result : {}) as Record<string, unknown>
+  const curNo = normText(current.receipt_number)
+  const priorNo = normText(prior.receipt_number || toStr(priorAi.receipt_number))
+  if (curNo && priorNo && curNo === priorNo) return 'same'
+  const numbersDiffer = !!(curNo && priorNo)
+
+  const curDates = dateKeys(current.date)
+  const priorDates = dateKeys(prior.receipt_date || toStr(priorAi.date))
+  if (curDates.length && priorDates.length) {
+    if (!curDates.some(d => priorDates.includes(d))) return 'different'
+    return numbersDiffer ? 'possible' : 'same'
+  }
+  return numbersDiffer ? 'different' : 'possible'
 }
 
 function fuzzyMatch(item: string, keyword: string): boolean {
@@ -127,7 +187,7 @@ function keywordsOverlap(keywordsA: string[], keywordsB: string[]): boolean {
   return keywordsA.some(a => keywordsB.some(b => fuzzyMatch(a, b) || fuzzyMatch(b, a)))
 }
 
-// Decide whether any prior entry blocks this one (same promotion, or overlapping brand keywords)
+// Of the given prior entries, find one that conflicts (same promotion, or overlapping brand keywords)
 async function findBlockingEntry(
   supabase: Db,
   priorEntries: PriorEntry[],
@@ -138,7 +198,7 @@ async function findBlockingEntry(
 
   if (promotionId) {
     const same = priorEntries.find(e => String(e.promotion_id) === String(promotionId))
-    if (same) return { promoName: same.promotion_name || 'this promotion', brand: '' }
+    if (same) return { promoName: same.promotion_name || 'this promotion', brand: '', ticket: same.ticket_number || '' }
   }
 
   if (!keywords.length) return null
@@ -158,10 +218,15 @@ async function findBlockingEntry(
     .in('id', ids)
   if (error) console.error('[entries] Prior promo lookup error:', error.message)
 
-  for (const p of (data ?? []) as PromoRow[]) {
+  for (const p of (data ?? []) as unknown as PromoRow[]) {
     const priorKeywords = toStringArray(p.product_keywords)
     if (keywordsOverlap(keywords, priorKeywords)) {
-      return { promoName: p.promo_name || 'another promotion', brand: priorKeywords[0] || '' }
+      const entry = priorEntries.find(e => String(e.promotion_id) === String(p.id))
+      return {
+        promoName: p.promo_name || 'another promotion',
+        brand: priorKeywords[0] || '',
+        ticket: entry?.ticket_number || '',
+      }
     }
   }
   return null
@@ -285,7 +350,7 @@ export async function POST(req: NextRequest) {
         .eq('id', promotionId)
         .maybeSingle()
       if (promoErr) console.error('[entries] Current promo lookup error:', promoErr.message)
-      const dbKeywords = toStringArray((currentPromo as { product_keywords?: unknown } | null)?.product_keywords)
+      const dbKeywords = toStringArray((currentPromo as unknown as { product_keywords?: unknown } | null)?.product_keywords)
       if (dbKeywords.length > 0) keywords = dbKeywords
     }
 
@@ -294,12 +359,12 @@ export async function POST(req: NextRequest) {
     // ── CHECK 1: identical file (free, runs before AI) ───────────────────────
     const { data: hashMatches, error: hashErr } = await supabase
       .from('customer_entries')
-      .select('id, promotion_id, promotion_name, retailer')
+      .select(ENTRY_COLS)
       .eq('receipt_hash', receiptHash)
       .neq('verification_status', 'rejected')
     if (hashErr) console.error('[entries] Hash lookup error:', hashErr.message)
 
-    const hashBlock = await findBlockingEntry(supabase, (hashMatches ?? []) as PriorEntry[], promotionId, keywords)
+    const hashBlock = await findBlockingEntry(supabase, (hashMatches ?? []) as unknown as PriorEntry[], promotionId, keywords)
     console.log('[entries] hash check', { matches: hashMatches?.length ?? 0, blocked: !!hashBlock })
     if (hashBlock) return duplicateResponse(hashBlock)
 
@@ -392,21 +457,43 @@ export async function POST(req: NextRequest) {
     }
 
     // ── CHECK 2: same receipt contents (catches re-photographed receipts) ────
-    const fingerprint = buildFingerprint(aiResult)
-    if (fingerprint) {
-      const { data: fpMatches, error: fpErr } = await supabase
+    if (aiResult.total_amount > 0) {
+      const { data: totalMatches, error: totalErr } = await supabase
         .from('customer_entries')
-        .select('id, promotion_id, promotion_name, retailer')
-        .eq('receipt_fingerprint', fingerprint)
+        .select(ENTRY_COLS)
+        .eq('receipt_total', aiResult.total_amount)
         .neq('verification_status', 'rejected')
-      if (fpErr) console.error('[entries] Fingerprint lookup error:', fpErr.message)
+        .limit(500)
+      if (totalErr) console.error('[entries] Content lookup error:', totalErr.message)
 
-      const sameReceipt = ((fpMatches ?? []) as PriorEntry[]).filter(e => retailerSimilar(e.retailer, aiResult.retailer))
-      const fpBlock = await findBlockingEntry(supabase, sameReceipt, promotionId, keywords)
-      console.log('[entries] fingerprint check', { fingerprint, matches: sameReceipt.length, blocked: !!fpBlock })
-      if (fpBlock) return duplicateResponse(fpBlock)
+      const candidates = (totalMatches ?? []) as unknown as PriorEntry[]
+      const sameReceipt = candidates.filter(e => compareReceipt(aiResult, e) === 'same')
+      const possibleReceipt = candidates.filter(e => compareReceipt(aiResult, e) === 'possible')
+
+      const contentBlock = await findBlockingEntry(supabase, sameReceipt, promotionId, keywords)
+      console.log('[entries] content check', {
+        total: aiResult.total_amount,
+        retailer: aiResult.retailer,
+        date: aiResult.date,
+        receiptNo: aiResult.receipt_number,
+        sameTotal: candidates.length,
+        same: sameReceipt.length,
+        possible: possibleReceipt.length,
+        blocked: !!contentBlock,
+      })
+      if (contentBlock) return duplicateResponse(contentBlock)
+
+      // Not certain (e.g. date unreadable) - accept the entry but flag it for a human
+      const possibleBlock = await findBlockingEntry(supabase, possibleReceipt, promotionId, keywords)
+      if (possibleBlock) {
+        aiResult = {
+          ...aiResult,
+          verification_status: 'manual_review',
+          verification_reason: 'Possible duplicate of ' + (possibleBlock.ticket || possibleBlock.promoName) + ' - please check',
+        }
+      }
     } else {
-      console.log('[entries] fingerprint check skipped - date or total not readable')
+      console.log('[entries] content check skipped - total not readable')
     }
 
     const isApproved = aiResult.verification_status === 'approved'
@@ -439,14 +526,14 @@ export async function POST(req: NextRequest) {
       ticket_number: ticket,
       amount: keywords.length > 0 ? aiResult.promoted_items_total : aiResult.total_amount,
       retailer: aiResult.retailer || 'Unknown',
-      receipt_date: isoDate(aiResult.date) || null,
+      receipt_date: dateKeys(aiResult.date)[0] || null,
       currency: aiResult.currency || fallbackCurrency,
       verification_status: isApproved ? 'approved' : 'manual_review',
       ai_confidence: aiResult.confidence || 0,
       ai_result: aiResult,
       receipt_image_path: receiptImagePath,
       receipt_hash: receiptHash,
-      receipt_fingerprint: fingerprint,
+      receipt_total: aiResult.total_amount > 0 ? aiResult.total_amount : null,
       receipt_number: aiResult.receipt_number || null,
       promotion_name: promotionName || null,
       company_name: companyName || null,
