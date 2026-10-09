@@ -1,4 +1,4 @@
-// v17 - per-brand receipt duplicate detection + build/runtime fixes
+// v18 - content-fingerprint duplicate detection (catches re-photographed receipts)
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
@@ -15,6 +15,7 @@ const SUPABASE_URL =
 
 const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'
 
+type Db = ReturnType<typeof createClient>
 type ImageMediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
 
 interface AiResult {
@@ -27,19 +28,29 @@ interface AiResult {
   retailer: string
   currency: string
   date: string
+  receipt_number: string
   barcode_found: boolean
 }
 
 interface PriorEntry {
   id: string | number
   promotion_id: string | number | null
+  promotion_name: string | null
+  retailer: string | null
 }
 
-interface PriorPromo {
+interface PromoRow {
   id: string | number
   promo_name: string | null
   product_keywords: unknown
 }
+
+interface BlockInfo {
+  promoName: string
+  brand: string
+}
+
+// ── helpers ──────────────────────────────────────────────────────────────────
 
 function normaliseMediaType(raw: string): ImageMediaType {
   if (raw === 'image/png') return 'image/png'
@@ -58,31 +69,129 @@ function toNumber(v: unknown): number {
 }
 
 function toStr(v: unknown): string {
-  return typeof v === 'string' ? v : ''
+  return typeof v === 'string' ? v.trim() : ''
 }
 
+// Accepts real arrays, JSON-array strings ('["Fanta"]') and comma strings ('Fanta, Fanta Orange')
 function toStringArray(v: unknown): string[] {
+  if (typeof v === 'string') {
+    const s = v.trim()
+    if (!s) return []
+    if (s.startsWith('[')) {
+      try { return toStringArray(JSON.parse(s)) } catch { /* fall through to comma split */ }
+    }
+    return s.split(',').map(x => x.trim()).filter(Boolean)
+  }
   return Array.isArray(v)
-    ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+    ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map(x => x.trim())
     : []
+}
+
+function normText(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+function isoDate(s: string): string {
+  const m = s.trim().match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : ''
+}
+
+// Two reads of the same receipt may name the store slightly differently
+function retailerSimilar(a: string | null, b: string | null): boolean {
+  const na = normText(a || '')
+  const nb = normText(b || '')
+  if (!na || !nb || na === 'unknown' || nb === 'unknown') return true
+  return na.slice(0, 5) === nb.slice(0, 5) || na.includes(nb) || nb.includes(na)
+}
+
+function buildFingerprint(r: AiResult): string | null {
+  const date = isoDate(r.date)
+  if (!date || r.total_amount <= 0) return null
+  return `${date}|${r.total_amount.toFixed(2)}`
 }
 
 function fuzzyMatch(item: string, keyword: string): boolean {
   const itemLower = item.toLowerCase().replace(/[^a-z0-9\s]/g, '')
   const keyWords = keyword.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(Boolean).slice(0, 3)
-  return keyWords.every(w => itemLower.includes(w))
+  return keyWords.length > 0 && keyWords.every(w => itemLower.includes(w))
 }
 
-// Check if two keyword sets overlap (share any keyword)
 function keywordsOverlap(keywordsA: string[], keywordsB: string[]): boolean {
   if (!keywordsA.length || !keywordsB.length) return false
   return keywordsA.some(a => keywordsB.some(b => fuzzyMatch(a, b) || fuzzyMatch(b, a)))
+}
+
+// Decide whether any prior entry blocks this one (same promotion, or overlapping brand keywords)
+async function findBlockingEntry(
+  supabase: Db,
+  priorEntries: PriorEntry[],
+  promotionId: unknown,
+  keywords: string[]
+): Promise<BlockInfo | null> {
+  if (!priorEntries.length) return null
+
+  if (promotionId) {
+    const same = priorEntries.find(e => String(e.promotion_id) === String(promotionId))
+    if (same) return { promoName: same.promotion_name || 'this promotion', brand: '' }
+  }
+
+  if (!keywords.length) return null
+
+  const ids = Array.from(
+    new Set(
+      priorEntries
+        .map(e => e.promotion_id)
+        .filter((x): x is string | number => x !== null && x !== undefined && x !== '')
+    )
+  )
+  if (!ids.length) return null
+
+  const { data, error } = await supabase
+    .from('promotion_submissions')
+    .select('id, promo_name, product_keywords')
+    .in('id', ids)
+  if (error) console.error('[entries] Prior promo lookup error:', error.message)
+
+  for (const p of (data ?? []) as PromoRow[]) {
+    const priorKeywords = toStringArray(p.product_keywords)
+    if (keywordsOverlap(keywords, priorKeywords)) {
+      return { promoName: p.promo_name || 'another promotion', brand: priorKeywords[0] || '' }
+    }
+  }
+  return null
+}
+
+function duplicateResponse(block: BlockInfo) {
+  const used = block.brand
+    ? `This receipt has already been used to enter a ${block.brand} promotion (${block.promoName}).`
+    : `This receipt has already been used to enter ${block.promoName}.`
+  return NextResponse.json({
+    error: 'duplicate_receipt',
+    message: used + ' Each receipt can only be used once per brand.',
+    promotionName: block.promoName,
+  }, { status: 409 })
 }
 
 function buildPrompt(keywords: string[], barcodes: string[], minSpend: number, currency: string): string {
   const barcodeNote = barcodes.length > 0
     ? '\nBARCODE CHECK: Also look for these product barcodes on the receipt: ' + barcodes.join(', ')
     : ''
+
+  const jsonShape = (itemsLine: string, itemsTotalLine: string, barcodeLine: string) =>
+    'Reply with JSON only, no markdown:\n'
+    + '{\n'
+    + '  "retailer": "exact store name from receipt",\n'
+    + '  "date": "purchase date in YYYY-MM-DD format, or empty string if not visible",\n'
+    + '  "receipt_number": "receipt/invoice/transaction number if shown, else empty string",\n'
+    + '  "total_amount": total of entire receipt as a plain number,\n'
+    + '  "currency": "currency code from receipt",\n'
+    + itemsLine
+    + itemsTotalLine
+    + barcodeLine
+    + '  "confidence": number 0-100,\n'
+    + '  "verification_status": "approved" or "manual_review",\n'
+    + '  "verification_reason": "brief explanation"\n'
+    + '}'
 
   if (keywords.length > 0) {
     const keywordList = keywords.join('", "')
@@ -92,44 +201,34 @@ function buildPrompt(keywords: string[], barcodes: string[], minSpend: number, c
       + '- Look for the brand name anywhere on the receipt as a store name, product name, or line item\n'
       + '- The brand name may be abbreviated or partially visible, be generous in matching\n'
       + '- Report the store/retailer name exactly as shown\n'
+      + '- Report the purchase date in YYYY-MM-DD format\n'
+      + '- Report the receipt/invoice/transaction number if one is printed\n'
       + '- Report the currency shown on the receipt (e.g. USD, GBP, EUR, UGX, KES, etc.)\n'
       + '- Add up the total spent on matching items only'
       + barcodeNote + '\n\n'
-      + 'Reply with JSON only, no markdown:\n'
-      + '{\n'
-      + '  "retailer": "exact store name from receipt",\n'
-      + '  "date": "date shown on receipt",\n'
-      + '  "total_amount": total of entire receipt as a plain number,\n'
-      + '  "currency": "currency code from receipt",\n'
-      + '  "promoted_items_found": ["item1", "item2"],\n'
-      + '  "promoted_items_total": total of matching items as a plain number,\n'
-      + '  "barcode_found": true or false,\n'
-      + '  "confidence": number 0-100,\n'
-      + '  "verification_status": "approved" or "manual_review",\n'
-      + '  "verification_reason": "brief explanation"\n'
-      + '}'
+      + jsonShape(
+        '  "promoted_items_found": ["item1", "item2"],\n',
+        '  "promoted_items_total": total of matching items as a plain number,\n',
+        '  "barcode_found": true or false,\n'
+      )
   }
 
   return 'You are verifying a receipt for a sales promotion. Extract the following information.\n\n'
     + '- Report the store/retailer name exactly as shown\n'
+    + '- Report the purchase date in YYYY-MM-DD format\n'
+    + '- Report the receipt/invoice/transaction number if one is printed\n'
     + '- Report the currency shown on the receipt\n'
     + '- Report the total amount\n'
     + '- Minimum spend required: ' + minSpend + ' ' + currency
     + barcodeNote + '\n\n'
-    + 'Reply with JSON only, no markdown:\n'
-    + '{\n'
-    + '  "retailer": "exact store name from receipt",\n'
-    + '  "date": "date shown on receipt",\n'
-    + '  "total_amount": total as a plain number,\n'
-    + '  "currency": "currency code from receipt",\n'
-    + '  "promoted_items_found": [],\n'
-    + '  "promoted_items_total": 0,\n'
-    + '  "barcode_found": false,\n'
-    + '  "confidence": number 0-100,\n'
-    + '  "verification_status": "approved" or "manual_review",\n'
-    + '  "verification_reason": "brief explanation"\n'
-    + '}'
+    + jsonShape(
+      '  "promoted_items_found": [],\n',
+      '  "promoted_items_total": 0,\n',
+      '  "barcode_found": false,\n'
+    )
 }
+
+// ── handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   try {
@@ -157,82 +256,50 @@ export async function POST(req: NextRequest) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     const anthropicKey = process.env.ANTHROPIC_API_KEY
 
-    // Never pretend an entry was saved if we cannot save it
     if (!serviceKey) {
       console.error('[entries] SUPABASE_SERVICE_ROLE_KEY is not set in this environment')
-      return NextResponse.json(
-        { error: 'Entries are temporarily unavailable. Please try again later.' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Entries are temporarily unavailable. Please try again later.' }, { status: 500 })
     }
 
-    const supabase = createClient(SUPABASE_URL, serviceKey, {
+    const supabase: Db = createClient(SUPABASE_URL, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
     const ticket = 'RR-' + Math.random().toString(36).substring(2, 10).toUpperCase()
     const isPdf = mediaType === 'application/pdf'
     const imageMediaType = normaliseMediaType(typeof mediaType === 'string' ? mediaType : '')
-    const keywords = toStringArray(productKeywords)
     const barcodes = toStringArray(productBarcodes)
     const minSpendNum = toNumber(minSpend)
     const fallbackCurrency = typeof currency === 'string' && currency ? currency : 'USD'
 
-    // Hash of the receipt file for duplicate detection
+    // Use the promotion's keywords from the database (trusted), fall back to what the client sent
+    let keywords = toStringArray(productKeywords)
+    if (promotionId) {
+      const { data: currentPromo, error: promoErr } = await supabase
+        .from('promotion_submissions')
+        .select('product_keywords')
+        .eq('id', promotionId)
+        .maybeSingle()
+      if (promoErr) console.error('[entries] Current promo lookup error:', promoErr.message)
+      const dbKeywords = toStringArray((currentPromo as { product_keywords?: unknown } | null)?.product_keywords)
+      if (dbKeywords.length > 0) keywords = dbKeywords
+    }
+
     const receiptHash = createHash('sha256').update(imageBase64).digest('hex')
 
-    // ── DUPLICATE DETECTION ──────────────────────────────────────────────────
-    const { data: priorEntriesData, error: priorError } = await supabase
+    // ── CHECK 1: identical file (free, runs before AI) ───────────────────────
+    const { data: hashMatches, error: hashErr } = await supabase
       .from('customer_entries')
-      .select('id, promotion_id')
+      .select('id, promotion_id, promotion_name, retailer')
       .eq('receipt_hash', receiptHash)
       .neq('verification_status', 'rejected')
+    if (hashErr) console.error('[entries] Hash lookup error:', hashErr.message)
 
-    if (priorError) console.error('[entries] Duplicate lookup error:', priorError.message)
+    const hashBlock = await findBlockingEntry(supabase, (hashMatches ?? []) as PriorEntry[], promotionId, keywords)
+    console.log('[entries] hash check', { matches: hashMatches?.length ?? 0, blocked: !!hashBlock })
+    if (hashBlock) return duplicateResponse(hashBlock)
 
-    const priorEntries = (priorEntriesData ?? []) as PriorEntry[]
-
-    if (priorEntries.length > 0) {
-      // 1. Same receipt, same promotion: always blocked
-      if (promotionId && priorEntries.some(e => String(e.promotion_id) === String(promotionId))) {
-        return NextResponse.json({
-          error: 'duplicate_receipt',
-          message: 'This receipt has already been used to enter this promotion. Each receipt can only be used once per brand.',
-          promotionName: promotionName || null,
-        }, { status: 409 })
-      }
-
-      // 2. Same receipt, different promotion with overlapping brand keywords: blocked
-      if (keywords.length > 0) {
-        const promoIds = Array.from(
-          new Set(
-            priorEntries
-              .map(e => e.promotion_id)
-              .filter((x): x is string | number => x !== null && x !== undefined && x !== '')
-          )
-        )
-
-        if (promoIds.length > 0) {
-          const { data: priorPromosData } = await supabase
-            .from('promotion_submissions')
-            .select('id, promo_name, product_keywords')
-            .in('id', promoIds)
-
-          for (const priorPromo of (priorPromosData ?? []) as PriorPromo[]) {
-            const priorKeywords = toStringArray(priorPromo.product_keywords)
-            if (keywordsOverlap(keywords, priorKeywords)) {
-              return NextResponse.json({
-                error: 'duplicate_receipt',
-                message: `This receipt has already been used to enter a ${priorKeywords[0] || 'similar'} promotion (${priorPromo.promo_name || 'another promotion'}). Each receipt can only be used once per brand.`,
-                promotionName: priorPromo.promo_name,
-              }, { status: 409 })
-            }
-          }
-        }
-      }
-    }
-    // ── END DUPLICATE DETECTION ──────────────────────────────────────────────
-
+    // ── AI VERIFICATION ──────────────────────────────────────────────────────
     let aiResult: AiResult = {
       verification_status: 'manual_review',
       total_amount: 0,
@@ -243,6 +310,7 @@ export async function POST(req: NextRequest) {
       retailer: 'Unknown',
       currency: fallbackCurrency,
       date: '',
+      receipt_number: '',
       barcode_found: false,
     }
 
@@ -301,6 +369,7 @@ export async function POST(req: NextRequest) {
           retailer: toStr(parsed.retailer) || 'Unknown',
           currency: parsedCurrency,
           date: toStr(parsed.date),
+          receipt_number: toStr(parsed.receipt_number),
           barcode_found: parsed.barcode_found === true,
         }
 
@@ -318,9 +387,27 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── CHECK 2: same receipt contents (catches re-photographed receipts) ────
+    const fingerprint = buildFingerprint(aiResult)
+    if (fingerprint) {
+      const { data: fpMatches, error: fpErr } = await supabase
+        .from('customer_entries')
+        .select('id, promotion_id, promotion_name, retailer')
+        .eq('receipt_fingerprint', fingerprint)
+        .neq('verification_status', 'rejected')
+      if (fpErr) console.error('[entries] Fingerprint lookup error:', fpErr.message)
+
+      const sameReceipt = ((fpMatches ?? []) as PriorEntry[]).filter(e => retailerSimilar(e.retailer, aiResult.retailer))
+      const fpBlock = await findBlockingEntry(supabase, sameReceipt, promotionId, keywords)
+      console.log('[entries] fingerprint check', { fingerprint, matches: sameReceipt.length, blocked: !!fpBlock })
+      if (fpBlock) return duplicateResponse(fpBlock)
+    } else {
+      console.log('[entries] fingerprint check skipped - date or total not readable')
+    }
+
     const isApproved = aiResult.verification_status === 'approved'
 
-    // Upload receipt file to Supabase Storage
+    // ── STORE RECEIPT FILE ───────────────────────────────────────────────────
     let receiptImagePath: string | null = null
     try {
       const fileBuffer = Buffer.from(imageBase64, 'base64')
@@ -339,6 +426,7 @@ export async function POST(req: NextRequest) {
       console.error('[entries] Upload exception:', uploadErr instanceof Error ? uploadErr.message : String(uploadErr))
     }
 
+    // ── SAVE ENTRY ───────────────────────────────────────────────────────────
     const { error: dbError } = await supabase.from('customer_entries').insert({
       promotion_id: promotionId || null,
       customer_name: name,
@@ -347,13 +435,15 @@ export async function POST(req: NextRequest) {
       ticket_number: ticket,
       amount: keywords.length > 0 ? aiResult.promoted_items_total : aiResult.total_amount,
       retailer: aiResult.retailer || 'Unknown',
-      receipt_date: aiResult.date || null,
+      receipt_date: isoDate(aiResult.date) || null,
       currency: aiResult.currency || fallbackCurrency,
       verification_status: isApproved ? 'approved' : 'manual_review',
       ai_confidence: aiResult.confidence || 0,
       ai_result: aiResult,
       receipt_image_path: receiptImagePath,
       receipt_hash: receiptHash,
+      receipt_fingerprint: fingerprint,
+      receipt_number: aiResult.receipt_number || null,
       promotion_name: promotionName || null,
       company_name: companyName || null,
     })
