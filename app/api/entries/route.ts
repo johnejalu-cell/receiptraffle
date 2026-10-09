@@ -1,4 +1,4 @@
-// v18 - content-fingerprint duplicate detection (catches re-photographed receipts)
+// v18.1 - content-fingerprint duplicate detection + Supabase client type fix
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
@@ -15,7 +15,13 @@ const SUPABASE_URL =
 
 const AI_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6'
 
-type Db = ReturnType<typeof createClient>
+function makeSupabase(serviceKey: string) {
+  return createClient(SUPABASE_URL, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+}
+type Db = ReturnType<typeof makeSupabase>
+
 type ImageMediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
 
 interface AiResult {
@@ -261,9 +267,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Entries are temporarily unavailable. Please try again later.' }, { status: 500 })
     }
 
-    const supabase: Db = createClient(SUPABASE_URL, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    })
+    const supabase = makeSupabase(serviceKey)
 
     const ticket = 'RR-' + Math.random().toString(36).substring(2, 10).toUpperCase()
     const isPdf = mediaType === 'application/pdf'
