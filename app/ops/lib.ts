@@ -46,6 +46,10 @@ export function fillLinkedIn(code: string, contact: any, account: any): string {
 
 // ---------- Email touches: Claude personalizes from these briefs ----------
 const EMAIL_GUIDES: Record<string, string> = {
+  R1: `Goal: this goes to a GENERIC company inbox (info@ or similar), not a named person. Ask them to point you to the right person. Open with "Hello," (there is no name). Subject idea: "Who handles trade marketing at [Company]?".
+Points: you are the founder of Receiptraffle, which helps FMCG brands run consumer promotions where shoppers photograph a supermarket receipt and the brand gets verified purchase data at store level. You are not selling anything in this email. Ask one thing only: who is the best person (name and email) for trade marketing, brand marketing or consumer promotions at [Company]. Say you would be grateful for a forward to them if that is easier. Maximum 70 words.`,
+  R2: `Goal: a polite follow-up to a generic inbox, 5 days after the first routing email. Open with "Hello,". Subject: "Re: Who handles trade marketing at [Company]?".
+Points: briefly remind them of the earlier note, repeat the single ask (the name or email of the person responsible for trade marketing, brand marketing or consumer promotions), and say a forward is welcome. Maximum 50 words.`,
   E1: `Goal: the data gap. Subject ideas: "[Company]'s sell-out data" or "Who owns your promo data?".
 Points: when a brand funds a consumer promotion, the retailer usually captures the shopper data and the brand gets a sell-in report weeks later. Receiptraffle reverses that: shoppers photograph their supermarket receipt, the system verifies the purchase automatically, and they enter the promo or raffle. The brand gets (1) verified proof of purchase at store level, (2) an opt-in consumer database it owns, (3) live campaign performance in its own client portal. No packaging changes, no printed codes, no retailer integration. Close by asking if closing the consumer data gap is a priority this year.`,
   E2: `Goal: compare with on-pack / under-cap code promos. Subject ideas: "Under-cap codes vs. receipts" or "Re: [Company] promo mechanics".
@@ -56,6 +60,17 @@ Facts you may use: Apo scouring powder ran an 8-week receipt-based promotion at 
 Points: say you have also reached out to a colleague on the trade marketing side about how [Company] measures promo performance, and you are writing to this person because it usually sits across trade marketing and insights. One line on Receiptraffle: it turns shoppers' supermarket receipts into verified purchase data, making trade spend measurable at store level. Ask who the right person would be to evaluate this.`,
   E5: `Goal: breakup email. Subject idea: "Closing the loop".
 Points: you have not heard back, so you will assume promo attribution is not a priority right now. If [Company] plans a promotion in the coming months and wants verified purchase data from it, they can reply "later" and you will reconnect next quarter. Keep it to 3 short sentences.`,
+}
+
+// Parses "SUBJECT: ...\nBODY:\n..." safely (line breaks in the body are fine)
+function parseDraft(raw: string): { subject: string; body: string } {
+  const cleaned = raw.replace(/```[a-z]*\n?|```/gi, '').trim()
+  const m = cleaned.match(/SUBJECT:\s*(.+?)\s*\n+\s*BODY:\s*\n?([\s\S]+)$/i)
+  if (!m) throw new Error('Could not read draft format')
+  const subject = m[1].trim()
+  const body = m[2].trim()
+  if (!subject || !body) throw new Error('Incomplete draft')
+  return { subject, body }
 }
 
 export async function draftEmail(
@@ -69,10 +84,10 @@ export async function draftEmail(
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
   const name = senderName()
 
-  const prompt = `You write short, plain cold emails for ${name}, founder of Receiptraffle (a receipt validation and promotion platform for FMCG brands in East Africa), to trade marketing and brand leaders.
+  const prompt = `You write short, plain emails for ${name}, founder of Receiptraffle (a receipt validation and promotion platform for FMCG brands in East Africa), to trade marketing and brand leaders.
 
 RECIPIENT
-First name: ${contact?.first_name || '(unknown, open with "Hi,")'}
+First name: ${contact?.first_name || '(unknown, open with "Hello,")'}
 Title: ${contact?.title || 'unknown'}
 Company: ${account?.name || 'unknown'}
 Country: ${account?.country || 'unknown'}
@@ -84,12 +99,16 @@ ${guide}
 HARD RULES
 - Never invent numbers, dates, customers or results. Only use facts in the brief.
 - Never say "85% accuracy". Never claim fraud detection. Never mention other supermarkets as proven; the only proven chain is Carrefour. Never mention tax-authority receipt systems.
-- Plain text, no markdown, no bullet symbols other than a dash, under 130 words.
+- Replace [Company] and [First Name] in the brief with the real values.
+- Plain text, no markdown, no bullet symbols other than a dash, within the word limit in the brief (default under 130 words).
 - Warm, direct, human. No hype words. One clear question or offer at the end.
 - Sign off with just "${name}, Receiptraffle".
 - Add this line after the sign-off: "If this isn't relevant, reply 'stop' and I won't email again."
 
-Respond ONLY with JSON, no markdown fences: {"subject": "...", "body": "..."}`
+Respond in EXACTLY this format and nothing else:
+SUBJECT: <the subject on one line>
+BODY:
+<the email body, with normal line breaks>`
 
   const res = await client.messages.create({
     model: process.env.OPS_MODEL || 'claude-haiku-5-5',
@@ -97,13 +116,6 @@ Respond ONLY with JSON, no markdown fences: {"subject": "...", "body": "..."}`
     messages: [{ role: 'user', content: prompt }],
   })
 
-  const raw = res.content
-    .map((c: any) => (c.type === 'text' ? c.text : ''))
-    .join('')
-    .replace(/```json|```/g, '')
-    .trim()
-
-  const j = JSON.parse(raw)
-  if (!j.subject || !j.body) throw new Error('Incomplete draft')
-  return { subject: String(j.subject), body: String(j.body) }
+  const raw = res.content.map((c: any) => (c.type === 'text' ? c.text : '')).join('')
+  return parseDraft(raw)
 }
