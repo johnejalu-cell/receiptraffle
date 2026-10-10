@@ -18,6 +18,12 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = db()
     const day = today()
+    let host = ''
+    try {
+      host = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '').host
+    } catch (e) {
+      host = 'invalid url'
+    }
     const summary: any = {
       day,
       routing: 0,
@@ -27,6 +33,8 @@ export async function GET(req: NextRequest) {
       unblocked: 0,
       skipped: 0,
       dueFound: 0,
+      dueCodes: [] as string[],
+      host: '',
       errors: [] as string[],
     }
 
@@ -97,6 +105,8 @@ export async function GET(req: NextRequest) {
       .limit(DRAFTS_PER_RUN)
     if (dueErr) summary.errors.push('due: ' + dueErr.message)
     summary.dueFound = due?.length || 0
+    summary.dueCodes = (due || []).map((t: any) => t.code)
+    summary.host = host
 
     await Promise.all(
       (due || []).map(async (t: any) => {
@@ -126,22 +136,26 @@ export async function GET(req: NextRequest) {
 
           if (t.channel === 'linkedin') {
             const body = fillLinkedIn(t.code, contact, account)
-            const { error } = await supabase
+            const { data: upd, error } = await supabase
               .from('rr_touches')
               .update({ status: 'drafted', body })
               .eq('id', t.id)
+              .select('id')
             if (error) throw new Error('save: ' + error.message)
+            if (!upd || upd.length === 0) throw new Error('save matched 0 rows')
           } else if (!contact.email) {
             await supabase.from('rr_touches').update({ status: 'skipped' }).eq('id', t.id)
             summary.skipped += 1
             return
           } else {
             const d = await draftEmail(t.code, contact, account)
-            const { error } = await supabase
+            const { data: upd, error } = await supabase
               .from('rr_touches')
               .update({ status: 'drafted', subject: d.subject, body: d.body })
               .eq('id', t.id)
+              .select('id')
             if (error) throw new Error('save: ' + error.message)
+            if (!upd || upd.length === 0) throw new Error('save matched 0 rows')
           }
           summary.drafted += 1
         } catch (e: any) {
