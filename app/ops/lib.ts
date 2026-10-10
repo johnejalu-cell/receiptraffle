@@ -62,14 +62,20 @@ Points: say you have also reached out to a colleague on the trade marketing side
 Points: you have not heard back, so you will assume promo attribution is not a priority right now. If [Company] plans a promotion in the coming months and wants verified purchase data from it, they can reply "later" and you will reconnect next quarter. Keep it to 3 short sentences.`,
 }
 
-// Parses "SUBJECT: ...\nBODY:\n..." safely (line breaks in the body are fine)
+// Parses "Subject: ...\nBody: ..." tolerantly (handles markdown bold, any casing, line breaks)
 function parseDraft(raw: string): { subject: string; body: string } {
-  const cleaned = raw.replace(/```[a-z]*\n?|```/gi, '').trim()
-  const m = cleaned.match(/SUBJECT:\s*(.+?)\s*\n+\s*BODY:\s*\n?([\s\S]+)$/i)
-  if (!m) throw new Error('Could not read draft format')
+  const cleaned = raw
+    .replace(/```[a-z]*\n?|```/gi, '')
+    .replace(/\*\*/g, '')
+    .replace(/^#+\s*/gm, '')
+    .trim()
+  const m = cleaned.match(/subject\s*:\s*(.+?)\s*\n+\s*(?:body\s*:\s*)?([\s\S]+)$/i)
+  if (!m) {
+    throw new Error('Could not read draft format. Model said: ' + cleaned.slice(0, 160))
+  }
   const subject = m[1].trim()
   const body = m[2].trim()
-  if (!subject || !body) throw new Error('Incomplete draft')
+  if (!subject || !body) throw new Error('Incomplete draft. Model said: ' + cleaned.slice(0, 160))
   return { subject, body }
 }
 
