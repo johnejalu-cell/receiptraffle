@@ -129,6 +129,9 @@ export async function GET(req: NextRequest) {
           }
 
           if (!contact || !['new', 'sequencing'].includes(contact.status)) {
+            summary.errors.push(
+              `${t.code}: skipped because contact ${contact ? 'status is ' + contact.status : 'was not found (id ' + t.contact_id + ')'}`
+            )
             await supabase.from('rr_touches').update({ status: 'skipped' }).eq('id', t.id)
             summary.skipped += 1
             return
@@ -144,6 +147,7 @@ export async function GET(req: NextRequest) {
             if (error) throw new Error('save: ' + error.message)
             if (!upd || upd.length === 0) throw new Error('save matched 0 rows')
           } else if (!contact.email) {
+            summary.errors.push(`${t.code}: skipped because the contact has no email address`)
             await supabase.from('rr_touches').update({ status: 'skipped' }).eq('id', t.id)
             summary.skipped += 1
             return
