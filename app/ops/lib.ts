@@ -21,7 +21,7 @@ export function opsAuthorized(req: NextRequest): boolean {
 }
 
 export function senderName(): string {
-  return process.env.OPS_SENDER_NAME || 'John'
+  return process.env.OPS_SENDER_NAME || 'John Ejalu'
 }
 
 export function today(): string {
@@ -88,11 +88,34 @@ function parseDraft(raw: string): { subject: string; body: string } {
   return { subject, body }
 }
 
+// E1 is a fixed, founder-approved email: no AI rewriting
+function fixedE1(contact: any): { subject: string; body: string } {
+  const first = (contact?.first_name || '').trim()
+  const greeting = first ? `Hi ${first},` : 'Hello,'
+  const body = `${greeting}
+
+Getting proof of purchase from consumers is the hard part of most consumer promotions, which is why many brands limit their promotions to certain outlets or areas. Our AI receipt verification system removes that limit. A shopper photographs their receipt from any outlet, anywhere in the country, and the purchase is verified automatically. There is no retailer integration and no outlet-by-outlet setup.
+
+Because every entry is tied to a real receipt, your team gets verified proof of purchase at store level. You also build a consumer database that you own, and you can watch live results in your own client portal.
+
+There are no packaging changes and no printed codes.
+
+Is a promotion that is not limited to certain outlets or regions of interest to you?
+
+John Ejalu
+Receipt-Raffle Promotions
+
+If this isn't relevant, please let me know by reply.`
+  return { subject: 'Promotions not limited to certain outlets or regions', body }
+}
+
 export async function draftEmail(
   code: string,
   contact: any,
   account: any
 ): Promise<{ subject: string; body: string }> {
+  if (code === 'E1') return fixedE1(contact)
+
   const guide = EMAIL_GUIDES[code]
   if (!guide) throw new Error('No email guide for ' + code)
 
