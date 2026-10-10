@@ -59,6 +59,7 @@ export default function OpsPage() {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const [errors, setErrors] = useState<string[]>([])
   const [edits, setEdits] = useState<Record<string, { subject: string; body: string }>>({})
 
   const load = useCallback(async (k: string) => {
@@ -98,9 +99,13 @@ export default function OpsPage() {
   const draftNow = async () => {
     setBusy(true)
     setMsg('')
+    setErrors([])
     try {
       const j = await api('/api/ops/cron', key)
-      setMsg(`Started ${j.started} sequences, drafted ${j.drafted}, failed ${j.failed}.`)
+      setMsg(
+        `Date ${j.day}. Due found ${j.dueFound}, drafted ${j.drafted}, failed ${j.failed}, skipped ${j.skipped}, sequences started ${j.started}.`
+      )
+      setErrors(j.errors || [])
       await load(key)
     } catch (e: any) {
       setErr(e.message)
@@ -154,6 +159,14 @@ export default function OpsPage() {
           Apo has approved being named (unblocks the E3 email)
         </label>
         {msg && <p style={{ color: '#065f46', fontSize: 13 }}>{msg}</p>}
+        {errors.length > 0 && (
+          <div style={{ color: '#b91c1c', fontSize: 13, wordBreak: 'break-word' }}>
+            <b>Errors:</b>
+            {errors.map((e, i) => (
+              <div key={i}>{e}</div>
+            ))}
+          </div>
+        )}
         {err && <p style={{ color: '#b91c1c', fontSize: 13 }}>{err}</p>}
       </div>
 
