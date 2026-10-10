@@ -103,7 +103,7 @@ export default function OpsPage() {
     try {
       const j = await api('/api/ops/cron', key)
       setMsg(
-        `Date ${j.day}. Due found ${j.dueFound}, drafted ${j.drafted}, failed ${j.failed}, skipped ${j.skipped}, sequences started ${j.started}.`
+        `Date ${j.day}. Due found ${j.dueFound} (${(j.dueCodes || []).join(', ') || 'none'}), drafted ${j.drafted}, failed ${j.failed}, skipped ${j.skipped}, sequences started ${j.started}. Database: ${j.host}`
       )
       setErrors(j.errors || [])
       await load(key)
