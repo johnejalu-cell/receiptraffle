@@ -51,17 +51,22 @@ export function fillLinkedIn(code: string, contact: any, account: any): string {
 // ---------- Email touches: Claude personalizes from these briefs ----------
 const EMAIL_GUIDES: Record<string, string> = {
   R1: `Goal: this goes to a GENERIC company inbox (info@ or similar), not a named person. Ask them to point you to the right person. Open with "Hello," (there is no name). Subject idea: "Who handles trade marketing at [Company]?".
-Points: you are the founder of Receiptraffle, which helps FMCG brands run consumer promotions where shoppers photograph a supermarket receipt and the brand gets verified purchase data at store level. You are not selling anything in this email. Ask one thing only: who is the best person (name and email) for trade marketing, brand marketing or consumer promotions at [Company]. Say you would be grateful for a forward to them if that is easier. Maximum 70 words.`,
+Points: you are the founder of Receiptraffle, which lets FMCG brands run consumer promotions nationwide, not just in selected outlets, because AI verifies a photo of the shopper's receipt. You are not selling anything in this email. Ask one thing only: who is the best person (name and email) for trade marketing, brand marketing or consumer promotions at [Company]. Say you would be grateful for a forward to them if that is easier. Maximum 70 words.`,
   R2: `Goal: a polite follow-up to a generic inbox, 5 days after the first routing email. Open with "Hello,". Subject: "Re: Who handles trade marketing at [Company]?".
 Points: briefly remind them of the earlier note, repeat the single ask (the name or email of the person responsible for trade marketing, brand marketing or consumer promotions), and say a forward is welcome. Maximum 50 words.`,
-  E1: `Goal: the data gap. Subject ideas: "[Company]'s sell-out data" or "Who owns your promo data?".
-Points: when a brand funds a consumer promotion, the retailer usually captures the shopper data and the brand gets a sell-in report weeks later. Receiptraffle reverses that: shoppers photograph their supermarket receipt, the system verifies the purchase automatically, and they enter the promo or raffle. The brand gets (1) verified proof of purchase at store level, (2) an opt-in consumer database it owns, (3) live campaign performance in its own client portal. No packaging changes, no printed codes, no retailer integration. Close by asking if closing the consumer data gap is a priority this year.`,
+  E1: `Goal: lead with nationwide reach, then the data. Subject ideas: "Run [Company] promotions nationwide" or "A promo that works in every outlet".
+Points, in this order:
+(1) LEAD with this: proof of purchase is the hard part of any consumer promotion, so most brands limit promotions to particular outlets or areas. Receiptraffle's AI receipt verification removes that limit: a shopper photographs the receipt from any outlet that issues one, anywhere in the country, and the purchase is verified automatically. No retailer integration, no outlet-by-outlet setup.
+(2) Because every entry is tied to a real receipt, the brand gets verified proof of purchase at store level.
+(3) The brand also builds an opt-in consumer database it owns, and watches live results in its own client portal.
+(4) No packaging changes and no printed codes.
+Close by asking if running a promotion that is not limited to certain outlets or regions is of interest to [Company] this year. Do NOT claim every supermarket chain is already proven.`,
   E2: `Goal: compare with on-pack / under-cap code promos. Subject ideas: "Under-cap codes vs. receipts" or "Re: [Company] promo mechanics".
 Points: code-based promos have (1) long lead time because packaging changes need months of planning, (2) cost, because code printing adds cost to every unit including packs never redeemed, (3) fraud, because codes get harvested or shared while receipts tie each entry to a real purchase. Receipt validation can run on existing stock. Do NOT state how many days a launch takes. Offer to send a one-page cost comparison for their category.`,
   E3: `Goal: Apo proof point. Subject ideas: "How Apo ran a receipt promo at Carrefour" or "Apo's promo data".
 Facts you may use: Apo scouring powder ran an 8-week receipt-based promotion at Carrefour in Uganda. 1,200 receipts were submitted. About 85% were verified instantly by the system; the remainder were checked by our team and every genuine entry was approved. Apo's team tracked entries live in their own portal, with no new packaging or codes. Campaigns start from $750. Offer a 3-minute walkthrough. Do not invent any other figures.`,
   E4: `Goal: pivot to a second decision-maker. Subject idea: "[First Name] and [Company]'s promo data".
-Points: say you have also reached out to a colleague on the trade marketing side about how [Company] measures promo performance, and you are writing to this person because it usually sits across trade marketing and insights. One line on Receiptraffle: it turns shoppers' supermarket receipts into verified purchase data, making trade spend measurable at store level. Ask who the right person would be to evaluate this.`,
+Points: say you have also reached out to a colleague on the trade marketing side about how [Company] measures promo performance, and you are writing to this person because it usually sits across trade marketing and insights. One line on Receiptraffle: AI receipt verification lets a brand run a promotion nationwide instead of in selected outlets, and turns each receipt into verified store-level purchase data. Ask who the right person would be to evaluate this.`,
   E5: `Goal: breakup email. Subject idea: "Closing the loop".
 Points: you have not heard back, so you will assume promo attribution is not a priority right now. If [Company] plans a promotion in the coming months and wants verified purchase data from it, they can reply "later" and you will reconnect next quarter. Keep it to 3 short sentences.`,
 }
@@ -106,7 +111,11 @@ Category: ${account?.category || 'unknown'}
 BRIEF FOR THIS EMAIL (${code})
 ${guide}
 
+POSITIONING (applies to every email)
+The lead benefit is reach: AI receipt verification solves the proof-of-purchase problem, so promotions can run nationwide instead of being limited to particular outlets or areas. Verified store-level data and an owned consumer database come after that. Be accurate: reach means any outlet that issues a receipt; the only chain proven so far is Carrefour.
+
 HARD RULES
+- Write to the recipient directly in the second person ("you", "your team"). Never refer to the recipient's company as a third party ("Mukwano gets").
 - Never invent numbers, dates, customers or results. Only use facts in the brief.
 - Never say "85% accuracy". Never claim fraud detection. Never mention other supermarkets as proven; the only proven chain is Carrefour. Never mention tax-authority receipt systems.
 - Replace [Company] and [First Name] in the brief with the real values.
