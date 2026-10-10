@@ -197,7 +197,8 @@ export default function OpsPage() {
               />
             )}
             <textarea
-              style={{ ...input, minHeight: 170 }}
+              style={{ ...input, resize: 'vertical', lineHeight: 1.45 }}
+              rows={Math.max(8, v.body.split('\n').length + Math.ceil(v.body.length / 36))}
               value={v.body}
               onChange={(e) => setVal(t, { body: e.target.value })}
             />
