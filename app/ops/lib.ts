@@ -8,6 +8,10 @@ export function db() {
   if (!url || !key) throw new Error('Supabase env vars missing')
   return createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
+    // Next.js caches fetch() responses by default; force fresh data on every call
+    global: {
+      fetch: (input: any, init: any) => fetch(input, { ...(init || {}), cache: 'no-store' }),
+    },
   })
 }
 
