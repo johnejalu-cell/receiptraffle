@@ -96,6 +96,20 @@ export default function OpsPage() {
     }
   }
 
+  const sendNow = async (t: any, subject: string, body: string, email: string) => {
+    if (!window.confirm(`Send this email to ${email} from your mailbox now?`)) return
+    setMsg('')
+    setErrors([])
+    setErr('')
+    try {
+      const j = await api('/api/ops/send', key, 'POST', { id: t.id, subject, body })
+      setMsg(`Sent to ${j.to}. Today: ${j.sentToday} of ${j.cap}.`)
+      await load(key)
+    } catch (e: any) {
+      setErr(e.message)
+    }
+  }
+
   const draftNow = async () => {
     setBusy(true)
     setMsg('')
@@ -204,8 +218,13 @@ export default function OpsPage() {
             />
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
               {isEmail && c.email && (
-                <a style={btnPrimary} href={mailto}>
-                  Open in email
+                <button style={btnPrimary} onClick={() => sendNow(t, v.subject, v.body, c.email)}>
+                  Send now
+                </button>
+              )}
+              {isEmail && c.email && (
+                <a style={btn} href={mailto}>
+                  Open in email app
                 </a>
               )}
               {!isEmail && c.linkedin_url && (
