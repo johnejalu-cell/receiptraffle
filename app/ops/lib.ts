@@ -122,9 +122,13 @@ BODY:
 
   const res = await client.messages.create({
     model: process.env.OPS_MODEL || 'claude-haiku-5-5',
-    max_tokens: 700,
+    max_tokens: 2000,
     messages: [{ role: 'user', content: prompt }],
   })
+
+  if (res.stop_reason === 'max_tokens') {
+    throw new Error('Draft was cut off by the length limit; tap draft again')
+  }
 
   const raw = res.content.map((c: any) => (c.type === 'text' ? c.text : '')).join('')
   return parseDraft(raw)
