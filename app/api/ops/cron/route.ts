@@ -4,9 +4,10 @@ import { db, opsAuthorized, draftEmail, fillLinkedIn, today } from '../../../ops
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
 
-const NEW_SEQUENCES_PER_RUN = 5
-const NEW_ROUTING_PER_RUN = 8
-const DRAFTS_PER_RUN = 15
+// Adjustable from Vercel environment variables (no code change needed)
+const NEW_SEQUENCES_PER_RUN = parseInt(process.env.NEW_SEQUENCES_PER_DAY || '10', 10)
+const NEW_ROUTING_PER_RUN = parseInt(process.env.NEW_ROUTING_PER_DAY || '15', 10)
+const DRAFTS_PER_RUN = parseInt(process.env.DRAFTS_PER_RUN || '40', 10)
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')
@@ -79,7 +80,7 @@ export async function GET(req: NextRequest) {
       .select('id, persona, email, linkedin_url, rr_accounts!inner(route)')
       .eq('status', 'new')
       .in('rr_accounts.route', ['full_sequence', 'standard_sequence'])
-      .limit(80)
+      .limit(Math.max(80, NEW_SEQUENCES_PER_RUN * 4))
     if (freshErr) summary.errors.push('fresh: ' + freshErr.message)
 
     const eligible = (fresh || [])
