@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Receipt-Raffle: see how it works</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;600;800&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#E9EEF2; --ink:#17202A; --muted:#55616E; --panel:#FFFFFF; --rule:#C7D0D9;
+  --paper:#FBFBF7; --print:#2B2F33; --ok:#0B7A5E; --okbg:#DDF3EA; --warn:#9A5B00; --warnbg:#FBEBCB;
+  --btn:#17202A; --btntext:#FFFFFF;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10161C; --ink:#EAF0F5; --muted:#9AA7B4; --panel:#18212A; --rule:#2B3743;
+    --okbg:#12392F; --ok:#4FD1A5; --warn:#F0B35A; --warnbg:#3A2A0E;
+    --btn:#EAF0F5; --btntext:#10161C;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10161C; --ink:#EAF0F5; --muted:#9AA7B4; --panel:#18212A; --rule:#2B3743;
+  --okbg:#12392F; --ok:#4FD1A5; --warn:#F0B35A; --warnbg:#3A2A0E;
+  --btn:#EAF0F5; --btntext:#10161C;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;-webkit-text-size-adjust:100%}
+main{max-width:640px;margin:0 auto;padding:28px 18px 48px}
+h1{font-size:clamp(1.9rem,7.5vw,2.7rem);line-height:1.08;margin:0 0 12px;font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.35rem;margin:0 0 6px;font-weight:800;letter-spacing:-.01em}
+p{margin:0 0 12px}
+.lead{color:var(--muted);font-size:1.05rem;max-width:34em}
+.brand{font-weight:800;font-size:.95rem;margin-bottom:22px}
+button,.btn{font:inherit;font-weight:600;border:0;border-radius:10px;padding:13px 18px;background:var(--btn);color:var(--btntext);cursor:pointer;text-decoration:none;display:inline-block;min-height:46px}
+button.alt,.btn.alt{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+button:disabled{opacity:.45;cursor:default}
+:focus-visible{outline:3px solid var(--ok);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.progress{display:flex;gap:6px;margin:26px 0 18px}
+.progress button{flex:1;padding:10px 4px;font-size:.82rem;background:transparent;color:var(--muted);border:1.5px solid var(--rule);min-height:auto}
+.progress button[aria-current="step"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:14px;padding:20px 18px}
+.panel[hidden]{display:none}
+.receipt{position:relative;background:var(--paper);color:var(--print);font-family:"Courier Prime","Courier New",monospace;font-size:.92rem;padding:18px 16px;margin:16px auto;max-width:320px;overflow:hidden;box-shadow:0 1px 0 var(--rule);clip-path:polygon(0 0,100% 0,100% calc(100% - 8px),96% 100%,92% calc(100% - 8px),88% 100%,84% calc(100% - 8px),80% 100%,76% calc(100% - 8px),72% 100%,68% calc(100% - 8px),64% 100%,60% calc(100% - 8px),56% 100%,52% calc(100% - 8px),48% 100%,44% calc(100% - 8px),40% 100%,36% calc(100% - 8px),32% 100%,28% calc(100% - 8px),24% 100%,20% calc(100% - 8px),16% 100%,12% calc(100% - 8px),8% 100%,4% calc(100% - 8px),0 100%);padding-bottom:26px}
+.receipt .c{text-align:center}
+.receipt .l{display:flex;justify-content:space-between;gap:10px}
+.receipt hr{border:0;border-top:1px dashed var(--print);opacity:.5;margin:8px 0}
+.receipt .hit{background:rgba(11,122,94,.0);transition:background .4s}
+.receipt.read .hit{background:rgba(11,122,94,.22)}
+.receipt.blur{filter:blur(2.6px)}
+.scan{position:absolute;left:0;right:0;top:-6px;height:3px;background:var(--ok);box-shadow:0 0 14px var(--ok);opacity:0}
+.receipt.scanning .scan{opacity:1;animation:sweep 1.5s linear forwards}
+@keyframes sweep{to{top:100%}}
+.fields{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:14px 0;font-size:.95rem}
+.fields dt{color:var(--muted)}
+.fields dd{margin:0;font-weight:600}
+.tag{display:inline-block;padding:7px 12px;border-radius:8px;font-weight:700;font-size:.95rem}
+.tag.ok{background:var(--okbg);color:var(--ok)}
+.tag.warn{background:var(--warnbg);color:var(--warn)}
+.note{font-size:.9rem;color:var(--muted)}
+.sample{display:inline-block;font-size:.82rem;font-weight:600;color:var(--warn);background:var(--warnbg);padding:4px 10px;border-radius:6px;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:8px 0 18px}
+.stats div{background:var(--bg);border-radius:10px;padding:12px 8px;text-align:center}
+.stats b{display:block;font-size:1.4rem;font-weight:800}
+.stats span{font-size:.78rem;color:var(--muted)}
+.bars{list-style:none;margin:0 0 16px;padding:0}
+.bars li{display:grid;grid-template-columns:130px 1fr 38px;gap:8px;align-items:center;font-size:.88rem;margin-bottom:8px}
+.bars i{display:block;height:12px;border-radius:6px;background:var(--ok);width:0;transition:width 1s ease}
+.pick{font-family:"Courier Prime","Courier New",monospace;font-size:2rem;font-weight:700;text-align:center;padding:22px 8px;background:var(--bg);border-radius:12px;margin:14px 0;letter-spacing:.04em}
+.cta{margin-top:26px;padding:22px 18px;border-radius:14px;background:var(--ink);color:var(--bg)}
+.cta h2{margin-bottom:8px}
+.cta .btn{background:var(--bg);color:var(--ink)}
+.cta .btn.alt{background:transparent;color:var(--bg);border-color:var(--bg)}
+footer{margin-top:22px;font-size:.82rem;color:var(--muted)}
+.illus{display:block;width:100%;max-width:340px;height:auto;margin:10px auto 14px}
+.illus.sm{max-width:300px}.illus.xs{max-width:150px;margin:0 auto 10px}
+.f-ink{fill:var(--ink)}.f-ok{fill:var(--ok)}.f-okbg{fill:var(--okbg)}.f-paper{fill:var(--paper)}.f-panel{fill:var(--panel)}.f-rule{fill:var(--rule)}.f-print{fill:#2B2F33;opacity:.55}
+.st-ink{stroke:var(--ink);fill:none;stroke-linecap:round;stroke-linejoin:round}
+.st-ok{stroke:var(--ok);fill:none;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
+.st-rule{stroke:var(--rule);stroke-width:1.5}
+.cap{font-size:11px;font-weight:600;fill:var(--muted);text-anchor:middle;font-family:inherit}
+.wheel{transform-box:fill-box;transform-origin:center}
+.drum.spin .wheel{animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.receipt.scanning .scan{animation:none;top:100%}.bars i{transition:none}.drum.spin .wheel{animation:none}}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">Receipt-Raffle Promotions</div>
+  <h1>Run your promotion in every outlet, nationwide.</h1>
+  <p class="lead">Proof of purchase is why most promotions stay limited to a few outlets. Try the demo to see how a shopper's receipt photo is verified automatically, and what your team sees.</p>
+  <svg class="illus" viewBox="0 0 320 190" role="img" aria-label="A phone photographing a shopping receipt">
+<ellipse cx="160" cy="98" rx="146" ry="84" class="f-okbg"/>
+<g transform="rotate(-7 90 100)">
+<path d="M52 40h76v112l-9.5-6l-9.5 6l-9.5-6l-9.5 6l-9.5-6l-9.5 6l-9.5-6l-9.5 6z" class="f-paper st-rule"/>
+<rect x="62" y="54" width="56" height="5" rx="2" class="f-print"/><rect x="62" y="66" width="40" height="3" rx="1.5" class="f-print"/>
+<rect x="59" y="78" width="62" height="13" rx="3" class="f-okbg"/><rect x="62" y="82" width="46" height="4" rx="2" class="f-print"/>
+<rect x="62" y="100" width="48" height="3" rx="1.5" class="f-print"/><rect x="62" y="110" width="36" height="3" rx="1.5" class="f-print"/>
+<rect x="62" y="126" width="56" height="6" rx="2" class="f-ink"/>
+</g>
+<path d="M134 96c14-8 26-8 38-1" class="st-ink" stroke-width="2" stroke-dasharray="4 5"/>
+<path d="M165 88l9 7-10 4" class="st-ink" stroke-width="2"/>
+<rect x="176" y="20" width="92" height="152" rx="16" class="f-ink"/>
+<rect x="183" y="32" width="78" height="128" rx="8" class="f-panel"/>
+<circle cx="222" cy="26" r="2.5" class="f-rule"/>
+<path d="M193 56v-12h12M239 44h12v12M251 136v12h-12M205 148h-12v-12" class="st-ok"/>
+<path d="M207 62h30v46l-5-3l-5 3l-5-3l-5 3l-5-3l-5 3z" class="f-paper st-rule"/>
+<rect x="212" y="70" width="20" height="3" rx="1.5" class="f-print"/><rect x="212" y="78" width="14" height="3" rx="1.5" class="f-print"/><rect x="212" y="86" width="18" height="3" rx="1.5" class="f-print"/>
+<rect x="195" y="96" width="54" height="3" rx="1.5" class="f-ok"/>
+<circle cx="262" cy="40" r="18" class="f-ok"/><path d="M253 40l6 6l11-12" class="st-ok" style="stroke:#fff"/>
+</svg>
+<div class="row"><button id="start">Start the demo</button></div>
+
+  <nav class="progress" aria-label="Demo progress" id="prog" hidden>
+    <button data-go="1">Shopper</button>
+    <button data-go="2">Verification</button>
+    <button data-go="3">Your results</button>
+    <button data-go="4">The draw</button>
+  </nav>
+
+  <section class="panel" id="p1" hidden>
+    <h2>A shopper buys your product</h2>
+    <p>Any outlet that prints a receipt works. There is no retailer integration and no printed code on the pack. The shopper opens your promotion link and photographs the receipt.</p>
+    <svg class="illus sm" viewBox="0 0 320 100" role="img" aria-label="Buy a product, get a receipt, photograph it">
+<g transform="translate(34 6)"><rect x="8" y="0" width="14" height="10" rx="3" class="f-ink"/><rect x="0" y="10" width="30" height="58" rx="9" class="f-ok"/><rect x="5" y="30" width="20" height="20" rx="3" class="f-paper"/></g>
+<path d="M88 40h26m-8-6l8 6l-8 6" class="st-ink" stroke-width="2"/>
+<g transform="translate(142 8)"><path d="M0 0h32v54l-8-5l-8 5l-8-5l-8 5z" class="f-paper st-rule"/><rect x="6" y="9" width="20" height="3" rx="1.5" class="f-print"/><rect x="6" y="18" width="14" height="3" rx="1.5" class="f-print"/><rect x="6" y="27" width="18" height="3" rx="1.5" class="f-print"/><rect x="6" y="37" width="20" height="4" rx="2" class="f-ink"/></g>
+<path d="M196 40h26m-8-6l8 6l-8 6" class="st-ink" stroke-width="2"/>
+<rect x="238" y="6" width="40" height="68" rx="9" class="f-ink"/><rect x="242" y="14" width="32" height="52" rx="5" class="f-panel"/>
+<circle cx="258" cy="40" r="9" class="f-ok"/><path d="M253 40l4 4l7-8" class="st-ok" style="stroke:#fff;stroke-width:2.5"/>
+<text x="49" y="92" class="cap">Buy</text><text x="158" y="92" class="cap">Receipt</text><text x="258" y="92" class="cap">Photograph</text>
+</svg>
+<div class="receipt" id="rc" aria-label="Sample receipt">
+      <div class="scan"></div>
+      <div class="c"><b>SAMPLE SUPERMARKET</b><br>Kololo Branch<br>12 Oct 2026 &nbsp; 14:32</div>
+      <hr>
+      <div class="l hit"><span>Sample Brand Cooking Oil 3L</span><span><b>38,500</b></span></div>
+      <div class="l"><span>Bar soap x2</span><span>9,000</span></div>
+      <div class="l"><span>Rice 5kg</span><span>24,000</span></div>
+      <hr>
+      <div class="l"><b>TOTAL UGX</b><b>71,500</b></div>
+      <div class="c" style="margin-top:8px">Thank you for shopping</div>
+    </div>
+    <div class="row">
+      <button id="clear">Photograph this receipt</button>
+      <button class="alt" id="blurry">Try a blurry photo</button>
+    </div>
+  </section>
+
+  <section class="panel" id="p2" hidden>
+    <h2>The system reads and checks it</h2>
+    <svg class="illus xs" viewBox="0 0 140 90" role="img" aria-label="A magnifying glass checking a receipt">
+<path d="M20 8h44v62l-7.3-5l-7.4 5l-7.3-5l-7.4 5l-7.3-5l-7.3 5z" class="f-paper st-rule"/>
+<rect x="28" y="18" width="28" height="3" rx="1.5" class="f-print"/><rect x="28" y="27" width="20" height="3" rx="1.5" class="f-print"/><rect x="28" y="36" width="26" height="3" rx="1.5" class="f-print"/>
+<circle cx="88" cy="46" r="22" style="fill:var(--okbg);stroke:var(--ok);stroke-width:4"/>
+<path d="M104 62l16 16" class="st-ok" style="stroke-width:7"/>
+<path d="M77 46l8 8l13-15" class="st-ok"/>
+</svg>
+
+    <p class="note" id="p2note"></p>
+    <dl class="fields" id="fields"></dl>
+    <div id="result"></div>
+    <div class="row"><button id="to3" disabled>See what your team gets</button><button class="alt" id="again">Try the other photo</button></div>
+  </section>
+
+  <section class="panel" id="p3" hidden>
+    <span class="sample">Sample data for illustration</span>
+    <h2>Your live campaign portal</h2>
+    <p>Results update as shoppers enter. You see which stores drive sales, not just how many entries came in. Region and town breakdowns are coming soon.</p>
+    <div class="stats">
+      <div><b data-n="2430">0</b><span>entries</span></div>
+      <div><b data-n="2148">0</b><span>verified instantly</span></div>
+      <div><b data-n="282">0</b><span>checked by our team</span></div>
+    </div>
+    <ul class="bars" id="bars"></ul>
+    <p class="note">Opt-in consumer details are yours to export for your own database (Growth and Premium packages). Your branded campaign page and portal come with every campaign.</p>
+    <div class="row"><button id="to4">Run the draw</button></div>
+  </section>
+
+  <section class="panel" id="p4" hidden>
+    <span class="sample">Sample data for illustration</span>
+    <h2>The draw runs in the same system</h2>
+    <p>Only verified receipts enter. The winner list goes to you to fulfil prizes.</p>
+    <svg class="illus xs drum" id="drum" viewBox="0 0 180 140" role="img" aria-label="A prize draw drum full of tickets">
+<g class="wheel"><circle cx="90" cy="62" r="46" style="fill:var(--okbg);stroke:var(--ok);stroke-width:4"/><g transform="rotate(0 90 62)"><rect x="84" y="22" width="12" height="18" rx="2" class="f-paper st-rule"/></g><g transform="rotate(60 90 62)"><rect x="84" y="22" width="12" height="18" rx="2" class="f-paper st-rule"/></g><g transform="rotate(120 90 62)"><rect x="84" y="22" width="12" height="18" rx="2" class="f-paper st-rule"/></g><g transform="rotate(180 90 62)"><rect x="84" y="22" width="12" height="18" rx="2" class="f-paper st-rule"/></g><g transform="rotate(240 90 62)"><rect x="84" y="22" width="12" height="18" rx="2" class="f-paper st-rule"/></g><g transform="rotate(300 90 62)"><rect x="84" y="22" width="12" height="18" rx="2" class="f-paper st-rule"/></g><circle cx="90" cy="62" r="9" class="f-ok"/></g>
+<path d="M62 128h56M90 108v20" class="st-ink" stroke-width="5"/>
+</svg>
+<div class="pick" id="pick" aria-live="polite">RR-00000</div>
+    <p class="note" id="pickNote">Press the button to draw from the sample entries.</p>
+    <div class="row"><button id="draw">Draw a winner</button></div>
+  </section>
+
+  <section class="cta" id="cta" hidden>
+    <h2>Run one for your brand</h2>
+    <p>Tell us your brand, the outlets you sell through and your dates, and we will send you a proposal.</p>
+    <div class="row">
+      <a class="btn" href="https://wa.me/256779686284?text=Hello%20John%2C%20I%20watched%20the%20Receipt-Raffle%20demo.">WhatsApp John</a>
+      <a class="btn alt" href="mailto:john@promoz.online?subject=Receipt-Raffle%20demo">Email John</a>
+    </div>
+  </section>
+
+  <footer>John Ejalu, Receipt-Raffle Promotions (Miriko Solutions) &middot; 0779686284<br>Store names, numbers and the receipt above are made-up examples.</footer>
+</main>
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  var panels=[null,$('#p1'),$('#p2'),$('#p3'),$('#p4')];
+  var reached=0, current=0, outcome='';
+  var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function go(n){
+    current=n; if(n>reached) reached=n;
+    $('#prog').hidden=false;
+    for(var i=1;i<=4;i++){panels[i].hidden=(i!==n)}
+    $('#cta').hidden=!(n===4 && drew);
+    document.querySelectorAll('#prog button').forEach(function(b){
+      var k=+b.getAttribute('data-go');
+      b.disabled=k>reached;
+      if(k===n){b.setAttribute('aria-current','step')}else{b.removeAttribute('aria-current')}
+    });
+    panels[n].scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
+    if(n===3) runStats();
+  }
+  var drew=false;
+
+  $('#start').onclick=function(){go(1)};
+  document.querySelectorAll('#prog button').forEach(function(b){
+    b.onclick=function(){go(+b.getAttribute('data-go'))};
+  });
+
+  function scan(kind){
+    var rc=$('#rc');
+    rc.classList.remove('read','blur');
+    if(kind==='blur') rc.classList.add('blur');
+    rc.classList.add('scanning');
+    $('#clear').disabled=true; $('#blurry').disabled=true;
+    setTimeout(function(){
+      rc.classList.remove('scanning');
+      if(kind==='clear') rc.classList.add('read');
+      $('#clear').disabled=false; $('#blurry').disabled=false;
+      show(kind);
+    }, reduce?100:1600);
+  }
+  function show(kind){
+    outcome=kind;
+    var f=$('#fields'), r=$('#result');
+    if(kind==='clear'){
+      $('#p2note').textContent='The system reads the store, the date, the promoted item and its price from the photo. The price of the promoted item is what counts, not the basket total.';
+      f.innerHTML='<dt>Store</dt><dd>Sample Supermarket, Kololo</dd><dt>Date</dt><dd>12 Oct 2026</dd><dt>Promoted item</dt><dd>Sample Brand Cooking Oil 3L</dd><dt>Item price counted</dt><dd>UGX 38,500</dd>';
+      r.innerHTML='<span class="tag ok">Verified automatically. The shopper is entered in the draw.</span>';
+      $('#to3').disabled=false; $('#again').textContent='Try the blurry photo';
+    } else {
+      $('#p2note').textContent='When a photo is too unclear to read, nobody is rejected on the spot.';
+      f.innerHTML='<dt>Store</dt><dd>Could not read</dd><dt>Date</dt><dd>Could not read</dd><dt>Item price</dt><dd>Could not read</dd>';
+      r.innerHTML='<span class="tag warn">Sent to our team for review. The shopper is told it is being checked.</span><p class="note" style="margin-top:10px">Genuine receipts are approved after review.</p>';
+      $('#to3').disabled=false; $('#again').textContent='Try the clear photo';
+    }
+    go(2);
+  }
+  $('#clear').onclick=function(){scan('clear')};
+  $('#blurry').onclick=function(){scan('blur')};
+  $('#again').onclick=function(){
+    go(1);
+    setTimeout(function(){scan(outcome==='clear'?'blur':'clear')},reduce?0:350);
+  };
+  $('#to3').onclick=function(){go(3)};
+  $('#to4').onclick=function(){go(4)};
+
+  var statsDone=false;
+  function runStats(){
+    var bars=[['Sample Mart Lugogo',412],['Sample Mart Ntinda',356],['Fresh Sample Kololo',298],['Fresh Sample Bugolobi',241],['Sample Mart Entebbe',177]];
+    var ul=$('#bars');
+    if(!ul.children.length){
+      ul.innerHTML=bars.map(function(b){return '<li><span>'+b[0]+'</span><span><i data-w="'+Math.round(b[1]/412*100)+'"></i></span><span>'+b[1]+'</span></li>'}).join('');
+    }
+    setTimeout(function(){ul.querySelectorAll('i').forEach(function(i){i.style.width=i.getAttribute('data-w')+'%'})},60);
+    if(statsDone) return; statsDone=true;
+    document.querySelectorAll('[data-n]').forEach(function(el){
+      var t=+el.getAttribute('data-n'), s=0, steps=reduce?1:30, k=0;
+      var id=setInterval(function(){k++; s=Math.round(t*k/steps); el.textContent=s.toLocaleString('en-US'); if(k>=steps){clearInterval(id)}},30);
+    });
+  }
+
+  $('#draw').onclick=function(){
+    var b=$('#draw'), p=$('#pick'), dr=$('#drum'); b.disabled=true; dr.classList.add('spin'); var k=0;
+    var id=setInterval(function(){
+      p.textContent='RR-'+String(Math.floor(10000+Math.random()*89999));
+      k++;
+      if(k>(reduce?1:22)){
+        clearInterval(id);
+        dr.classList.remove('spin');
+        p.textContent='RR-48213';
+        $('#pickNote').textContent='Winner: verified receipt from Sample Mart Lugogo (sample). A draw certificate is issued by the system.';
+        b.disabled=false; b.textContent='Draw again'; drew=true; $('#cta').hidden=false;
+        $('#cta').scrollIntoView({behavior:reduce?'auto':'smooth',block:'nearest'});
+      }
+    },70);
+  };
+})();
+</script>
+</body>
+</html>
