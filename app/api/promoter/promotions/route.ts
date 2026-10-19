@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
     if (updates.product_keywords !== undefined) safeUpdates.product_keywords = updates.product_keywords
     if (updates.product_barcodes !== undefined) safeUpdates.product_barcodes = updates.product_barcodes
     if (updates.terms_conditions !== undefined) safeUpdates.terms_conditions = updates.terms_conditions
+    if (updates.require_age_confirmation !== undefined) safeUpdates.require_age_confirmation = !!updates.require_age_confirmation
 
     const { error: updateError } = await supabase
       .from('promotion_submissions')
