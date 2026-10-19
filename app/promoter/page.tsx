@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface Promotion {
   id: string
@@ -21,6 +21,7 @@ interface Promotion {
   terms_conditions: string
   grand_draw_id?: string
   grand_draw_name?: string
+  require_age_confirmation?: boolean | null
 }
 
 interface Entry {
@@ -58,6 +59,13 @@ export default function PromoterPage() {
   const [drawLoading, setDrawLoading] = useState(false)
   const [drawError, setDrawError] = useState('')
   const [loggedIn, setLoggedIn] = useState(false)
+  const [dailyDay, setDailyDay] = useState('')
+  const [dailyCount, setDailyCount] = useState(1)
+  const [dailyPrize, setDailyPrize] = useState('')
+  const [winnersList, setWinnersList] = useState<any[]>([])
+  const [dailyMsg, setDailyMsg] = useState('')
+  const [dailyBusy, setDailyBusy] = useState(false)
+  const [onePerPhone, setOnePerPhone] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [editForm, setEditForm] = useState<Partial<Promotion>>({})
   const [editBarcodes, setEditBarcodes] = useState<string[]>([])
@@ -108,6 +116,7 @@ export default function PromoterPage() {
       prizes: selectedPromo.prizes,
       product_keywords: selectedPromo.product_keywords,
       terms_conditions: selectedPromo.terms_conditions,
+      require_age_confirmation: selectedPromo.require_age_confirmation ?? undefined,
     })
     setEditBarcodes(selectedPromo.product_barcodes?.length ? selectedPromo.product_barcodes : [])
     setShowEdit(true); setSaveMsg('')
@@ -172,8 +181,77 @@ export default function PromoterPage() {
     } finally { setDrawLoading(false) }
   }
 
+  const winnerCreds = () => ({ promotionId: selectedPromo?.id, email: email.trim().toLowerCase(), pin: pin.trim() })
+
+  const loadWinners = async () => {
+    if (!selectedPromo) return
+    try {
+      const q = new URLSearchParams({ promotionId: selectedPromo.id, email: email.trim().toLowerCase(), pin: pin.trim() })
+      const res = await fetch('/api/promoter/winners?' + q.toString(), { cache: 'no-store' })
+      const data = await res.json()
+      if (res.ok) setWinnersList(data.winners || [])
+    } catch { /* ignore */ }
+  }
+
+  useEffect(() => { if (selectedPromo && loggedIn) loadWinners() }, [selectedPromo?.id, loggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const runDaily = async (again = false) => {
+    if (!selectedPromo) return
+    setDailyBusy(true); setDailyMsg('')
+    try {
+      const res = await fetch('/api/promoter/daily-draw', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...winnerCreds(), day: dailyDay || undefined, count: dailyCount, prizeLabel: dailyPrize, again, onePrizePerPhone: onePerPhone }),
+      })
+      const data = await res.json()
+      if (res.status === 409 && !again) {
+        if (confirm(data.error)) { setDailyBusy(false); return runDaily(true) }
+        throw new Error('Draw cancelled')
+      }
+      if (!res.ok) throw new Error(data.error)
+      setDailyMsg('Drew ' + data.drawn + ' winner(s) for ' + data.day + ' from ' + data.eligible + ' eligible entries.')
+      await loadWinners()
+    } catch (e: unknown) {
+      setDailyMsg(e instanceof Error ? e.message : 'Draw failed')
+    } finally { setDailyBusy(false) }
+  }
+
+  const winnerAction = async (id: string, action: string, prompt1?: string) => {
+    let note = ''
+    if (prompt1) { const n = window.prompt(prompt1); if (n === null) return; note = n }
+    setDailyBusy(true); setDailyMsg('')
+    try {
+      const res = await fetch('/api/promoter/winners', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...winnerCreds(), id, action, note, onePrizePerPhone: onePerPhone }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      if (action === 'fail') setDailyMsg(data.replacement ? 'Replacement winner drawn.' : (data.message || 'No replacement available.'))
+      await loadWinners()
+    } catch (e: unknown) {
+      setDailyMsg(e instanceof Error ? e.message : 'Action failed')
+    } finally { setDailyBusy(false) }
+  }
+
   const approvedCount = entries.filter(e => e.verification_status === 'approved').length
   const reviewCount = entries.filter(e => e.verification_status === 'manual_review').length
+
+  // Verified entries grouped by the store name read from each receipt
+  const storeStats = (() => {
+    const map = new Map<string, { label: string; count: number }>()
+    entries.filter(e => e.verification_status === 'approved').forEach(e => {
+      const raw = (e.retailer || '').trim()
+      const unreadable = !raw || raw.toLowerCase() === 'unknown'
+      const label = unreadable ? 'Store not readable' : raw.replace(/\s+/g, ' ')
+      const key = label.toLowerCase().replace(/[^a-z0-9 ]/g, '')
+      const cur = map.get(key)
+      if (cur) cur.count += 1
+      else map.set(key, { label, count: 1 })
+    })
+    return Array.from(map.values()).sort((a, b) => b.count - a.count)
+  })()
+  const storeMax = storeStats.length ? storeStats[0].count : 1
   const inp: React.CSSProperties = { width: '100%', padding: '11px 14px', border: '1px solid #ccc', borderRadius: '8px', fontSize: '15px', boxSizing: 'border-box' }
   const lbl: React.CSSProperties = { display: 'block', fontWeight: 600, fontSize: '14px', marginBottom: '5px', color: '#333' }
 
@@ -251,6 +329,7 @@ export default function PromoterPage() {
             ))}
             <button onClick={() => setEditBarcodes([...editBarcodes, ''])} style={{ marginTop: '6px', padding: '8px 14px', background: '#f0fdf4', border: '1px solid #1D9E75', borderRadius: '8px', color: '#1D9E75', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>+ Add barcode</button>
           </div>
+          <div style={{ marginBottom: '18px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 14px' }}><label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '14px', cursor: 'pointer' }}><input type="checkbox" checked={!!editForm.require_age_confirmation} onChange={e => setEditForm(f => ({ ...f, require_age_confirmation: e.target.checked }))} style={{ marginTop: '3px' }} /><span><b>Alcohol promotion: require 18+ confirmation</b><br /><span style={{ color: '#92400e', fontSize: '12px' }}>Shoppers must tick that they are 18 or over before they can enter. Leave off for other promotions.</span></span></label></div>
           <div style={{ marginBottom: '18px' }}><label style={lbl}>Terms &amp; Conditions</label><textarea style={{ ...inp, minHeight: '200px', fontFamily: 'monospace', fontSize: '13px', resize: 'vertical' }} value={editForm.terms_conditions || ''} onChange={e => setEditForm(f => ({ ...f, terms_conditions: e.target.value }))} /></div>
           {saveMsg && <div style={{ padding: '12px', borderRadius: '8px', marginBottom: '16px', background: saveMsg === 'success' ? '#f0fdf4' : '#fef2f2', color: saveMsg === 'success' ? '#16a34a' : '#dc2626', fontSize: '14px', fontWeight: 600 }}>{saveMsg === 'success' ? 'Saved successfully!' : saveMsg.replace('error:', '')}</div>}
           <button onClick={saveEdit} disabled={saving} style={{ width: '100%', padding: '13px', background: saving ? '#9ca3af' : '#1D9E75', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 700, fontSize: '15px', cursor: saving ? 'not-allowed' : 'pointer' }}>
@@ -333,6 +412,57 @@ export default function PromoterPage() {
           </div>
         )}
 
+        {/* Daily draws and winners */}
+        <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '16px 20px', marginBottom: '24px' }}>
+          <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '4px' }}>Daily draws and winners</div>
+          <div style={{ color: '#888', fontSize: '12px', marginBottom: '14px' }}>Draws from approved entries submitted on the chosen day (Uganda time). Verify each winning bill with the establishment before paying the prize.</div>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '12px' }}>
+            <label style={{ fontSize: '12px', color: '#555' }}>Day<br /><input type="date" value={dailyDay} onChange={e => setDailyDay(e.target.value)} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px' }} /></label>
+            <label style={{ fontSize: '12px', color: '#555' }}>Winners<br /><input type="number" min={1} max={20} value={dailyCount} onChange={e => setDailyCount(parseInt(e.target.value, 10) || 1)} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', width: '80px' }} /></label>
+            <label style={{ fontSize: '12px', color: '#555', flex: 1, minWidth: '160px' }}>Prize label<br /><input value={dailyPrize} onChange={e => setDailyPrize(e.target.value)} placeholder="e.g. UGX 20,000 airtime" style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', width: '100%', boxSizing: 'border-box' }} /></label>
+            <button onClick={() => runDaily(false)} disabled={dailyBusy} style={{ padding: '11px 18px', background: '#7c3aed', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>{dailyBusy ? 'Working...' : 'Run daily draw'}</button>
+          </div>
+          <label style={{ display: 'block', fontSize: '13px', color: '#374151', marginBottom: '10px' }}><input type="checkbox" checked={onePerPhone} onChange={e => setOnePerPhone(e.target.checked)} /> One prize per phone number (leave unticked to allow repeat winners)</label>
+          {dailyMsg && <div style={{ fontSize: '13px', color: '#374151', marginBottom: '10px' }}>{dailyMsg}</div>}
+          {winnersList.length === 0 ? <div style={{ color: '#9ca3af', fontSize: '13px' }}>No daily winners yet.</div> : winnersList.map((w: any) => (
+            <div key={w.id} style={{ borderTop: '1px solid #f1f1f1', padding: '12px 0', fontSize: '13px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                <div><b>{w.winner_name}</b> · <a href={'tel:' + w.winner_phone} style={{ color: '#7c3aed' }}>{w.winner_phone}</a> · ticket {w.winner_ticket}</div>
+                <div style={{ color: '#888' }}>{w.draw_day}</div>
+              </div>
+              <div style={{ color: '#555', margin: '4px 0' }}>Bar on bill: <b>{w.outlet_name || 'not read'}</b>{w.receipt_amount ? ' · UGX ' + Number(w.receipt_amount).toLocaleString() : ''}{w.prize_label ? ' · Prize: ' + w.prize_label : ''}</div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: w.winner_status === 'verified' ? '#dcfce7' : w.winner_status === 'failed' ? '#fee2e2' : '#fef3c7', color: w.winner_status === 'verified' ? '#166534' : w.winner_status === 'failed' ? '#991b1b' : '#92400e' }}>{w.winner_status === 'verified' ? 'Verified' : w.winner_status === 'failed' ? 'Failed' : 'To verify'}</span>
+                {w.prize_status === 'paid' && <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: '#dbeafe', color: '#1e40af' }}>Paid{w.payment_ref ? ' (' + w.payment_ref + ')' : ''}</span>}
+                {w.winner_status === 'pending' && <>
+                  <button disabled={dailyBusy} onClick={() => winnerAction(w.id, 'verify', 'Who at the bar confirmed the bill? (optional note)')} style={{ padding: '7px 12px', border: '1px solid #16a34a', background: 'white', color: '#166534', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>Verified</button>
+                  <button disabled={dailyBusy} onClick={() => { if (confirm('Mark this winner as failed and draw a replacement?')) winnerAction(w.id, 'fail', 'Reason (optional note)') }} style={{ padding: '7px 12px', border: '1px solid #dc2626', background: 'white', color: '#991b1b', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>Failed, redraw</button>
+                </>}
+                {w.winner_status === 'verified' && w.prize_status !== 'paid' && <button disabled={dailyBusy} onClick={() => winnerAction(w.id, 'paid', 'Payment reference (airtime or mobile money ref)')} style={{ padding: '7px 12px', border: '1px solid #2563eb', background: 'white', color: '#1e40af', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>Mark paid</button>}
+              </div>
+              {w.verification_note && <div style={{ color: '#888', fontSize: '12px', marginTop: '4px' }}>Note: {w.verification_note}</div>}
+            </div>
+          ))}
+        </div>
+
+        {/* Entries by store */}
+        {storeStats.length > 0 && (
+          <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '16px 20px', marginBottom: '24px' }}>
+            <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '4px' }}>Verified entries by store</div>
+            <div style={{ color: '#888', fontSize: '12px', marginBottom: '14px' }}>Store names are read from each receipt, so the same store can appear under slightly different names.</div>
+            {storeStats.slice(0, 10).map(st => (
+              <div key={st.label} style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 160px) 1fr 40px', gap: '10px', alignItems: 'center', marginBottom: '8px', fontSize: '13px' }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: st.label === 'Store not readable' ? '#888' : '#333' }}>{st.label}</span>
+                <span style={{ background: '#f3f4f6', borderRadius: '6px', height: '12px', display: 'block' }}>
+                  <span style={{ display: 'block', height: '12px', borderRadius: '6px', background: '#1D9E75', width: `${Math.max(4, Math.round((st.count / storeMax) * 100))}%` }} />
+                </span>
+                <span style={{ textAlign: 'right', fontWeight: 600 }}>{st.count}</span>
+              </div>
+            ))}
+            {storeStats.length > 10 && <div style={{ color: '#888', fontSize: '12px', marginTop: '6px' }}>+ {storeStats.length - 10} more stores in the CSV download</div>}
+          </div>
+        )}
+
         {/* Entries table */}
         <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', fontWeight: 700, fontSize: '15px' }}>
@@ -347,7 +477,7 @@ export default function PromoterPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                 <thead>
                   <tr style={{ background: '#f9fafb' }}>
-                    {['Ticket', 'Name', 'Phone', 'Email', 'Amount', 'Status', 'Date'].map(h => (
+                    {['Ticket', 'Name', 'Phone', 'Email', 'Amount', 'Store', 'Status', 'Date'].map(h => (
                       <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: '#555', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
@@ -360,6 +490,7 @@ export default function PromoterPage() {
                       <td style={{ padding: '10px 14px', color: '#555' }}>{e.customer_phone}</td>
                       <td style={{ padding: '10px 14px', color: '#555' }}>{e.customer_email || '—'}</td>
                       <td style={{ padding: '10px 14px', color: '#555' }}>{e.currency} {e.amount?.toLocaleString()}</td>
+                      <td style={{ padding: '10px 14px', color: '#555' }}>{e.retailer && e.retailer.toLowerCase() !== 'unknown' ? e.retailer : '—'}</td>
                       <td style={{ padding: '10px 14px' }}>
                         <span style={{ padding: '2px 8px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: e.verification_status === 'approved' ? '#dcfce7' : e.verification_status === 'rejected' ? '#fee2e2' : '#fef9c3', color: e.verification_status === 'approved' ? '#16a34a' : e.verification_status === 'rejected' ? '#dc2626' : '#92400e' }}>
                           {e.verification_status === 'approved' ? 'Approved' : e.verification_status === 'rejected' ? 'Rejected' : 'Under review'}
