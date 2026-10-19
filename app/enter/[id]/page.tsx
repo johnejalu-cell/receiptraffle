@@ -17,6 +17,7 @@ interface ApiPromotion {
   terms_conditions?: string | null
   draw_date?: string | null
   product_barcodes?: string[] | null
+  require_age_confirmation?: boolean | null
 }
 
 interface Promo {
@@ -34,6 +35,7 @@ interface Promo {
   logoUrl: string | null
   termsConditions: string | null
   drawDate: string
+  requireAge: boolean
 }
 
 interface EntryResult {
@@ -75,6 +77,7 @@ export default function EnterPage() {
   const [termsModal, setTermsModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [duplicateMessage, setDuplicateMessage] = useState('')
+  const [ageOk, setAgeOk] = useState(false)
 
   useEffect(() => {
     if (!id) { setPromoLoaded(true); return }
@@ -99,6 +102,7 @@ export default function EnterPage() {
             logoUrl: found.logo_url || null,
             termsConditions: found.terms_conditions || null,
             drawDate: found.draw_date || '',
+            requireAge: !!found.require_age_confirmation,
           })
         }
         setPromoLoaded(true)
@@ -176,6 +180,7 @@ export default function EnterPage() {
   async function handleVerify() {
     if (!promo) return
     if (!name || !phone) { alert('Please enter your name and phone number'); return }
+    if (promo.requireAge && !ageOk) { alert('Please confirm that you are 18 or over'); return }
     if (!file) { setStep('upload'); return }
 
     setStep('verifying')
@@ -211,6 +216,7 @@ export default function EnterPage() {
           email,
           promotionName: promo.title,
           companyName: promo.brand,
+          ageConfirmed: promo.requireAge ? ageOk : undefined,
         }),
       })
 
@@ -460,12 +466,18 @@ export default function EnterPage() {
                 <span style={{ flex: 1 }}>Receipt ready to submit</span>
                 <button onClick={resetReceipt} style={{ background: 'none', border: 'none', color: GREEN, fontSize: 12, cursor: 'pointer', textDecoration: 'underline', flexShrink: 0 }}>Change</button>
               </div>
+              {promo.requireAge && (
+                <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: '#FFF8E6', border: '1px solid #F3D88A', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#5a4300', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={ageOk} onChange={e => setAgeOk(e.target.checked)} style={{ marginTop: 3 }} />
+                  <span><strong>I confirm that I am 18 years or older.</strong><br />This promotion is for adults only. Please drink responsibly.</span>
+                </label>
+              )}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setStep('upload')} style={{ flex: 1, padding: '13px', background: '#fff', border: '1px solid #d0d0c8', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer', color: '#666' }}>
                   ← Back
                 </button>
-                <button onClick={handleVerify} disabled={!name || !phone}
-                  style={{ flex: 2, padding: '13px', background: !name || !phone ? '#ccc' : GREEN, color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: !name || !phone ? 'not-allowed' : 'pointer' }}>
+                <button onClick={handleVerify} disabled={!name || !phone || (promo.requireAge && !ageOk)}
+                  style={{ flex: 2, padding: '13px', background: !name || !phone || (promo.requireAge && !ageOk) ? '#ccc' : GREEN, color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: !name || !phone || (promo.requireAge && !ageOk) ? 'not-allowed' : 'pointer' }}>
                   Submit entry 🎟
                 </button>
               </div>
