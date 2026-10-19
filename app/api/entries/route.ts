@@ -317,6 +317,7 @@ export async function POST(req: NextRequest) {
       productBarcodes,
       promotionName,
       companyName,
+      ageConfirmed,
     } = body ?? {}
 
     if (!name || !phone) return NextResponse.json({ error: 'Missing name or phone' }, { status: 400 })
@@ -340,6 +341,19 @@ export async function POST(req: NextRequest) {
     const barcodes = toStringArray(productBarcodes)
     const minSpendNum = toNumber(minSpend)
     const fallbackCurrency = typeof currency === 'string' && currency ? currency : 'USD'
+
+    // Alcohol promotions can require an age confirmation (checked here so it cannot be bypassed)
+    if (promotionId) {
+      const { data: ageRow, error: ageErr } = await supabase
+        .from('promotion_submissions')
+        .select('require_age_confirmation')
+        .eq('id', promotionId)
+        .maybeSingle()
+      const ageRequired = !ageErr && !!(ageRow as unknown as { require_age_confirmation?: boolean } | null)?.require_age_confirmation
+      if (ageRequired && ageConfirmed !== true) {
+        return NextResponse.json({ error: 'Please confirm that you are 18 or over to enter this promotion.' }, { status: 400 })
+      }
+    }
 
     // Use the promotion's keywords from the database (trusted), fall back to what the client sent
     let keywords = toStringArray(productKeywords)
