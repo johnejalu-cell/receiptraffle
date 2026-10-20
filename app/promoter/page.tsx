@@ -22,6 +22,7 @@ interface Promotion {
   grand_draw_id?: string
   grand_draw_name?: string
   require_age_confirmation?: boolean | null
+  promoter_draw_enabled?: boolean | null
 }
 
 interface Entry {
@@ -234,6 +235,7 @@ export default function PromoterPage() {
     } finally { setDailyBusy(false) }
   }
 
+  const canDraw = !selectedPromo || selectedPromo.promoter_draw_enabled !== false
   const approvedCount = entries.filter(e => e.verification_status === 'approved').length
   const reviewCount = entries.filter(e => e.verification_status === 'manual_review').length
 
@@ -393,9 +395,11 @@ export default function PromoterPage() {
         {/* Action buttons */}
         <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
           <button onClick={downloadCSV} disabled={!entries.length} style={{ padding: '11px 18px', background: entries.length ? '#1D9E75' : '#e5e7eb', border: 'none', borderRadius: '8px', color: entries.length ? 'white' : '#9ca3af', fontWeight: 600, fontSize: '14px', cursor: entries.length ? 'pointer' : 'not-allowed' }}>⬇ Download CSV</button>
+          {canDraw && (
           <button onClick={runDraw} disabled={drawLoading || approvedCount === 0} style={{ padding: '11px 18px', background: approvedCount > 0 ? '#7c3aed' : '#e5e7eb', border: 'none', borderRadius: '8px', color: approvedCount > 0 ? 'white' : '#9ca3af', fontWeight: 600, fontSize: '14px', cursor: approvedCount > 0 ? 'pointer' : 'not-allowed' }}>
             {drawLoading ? 'Drawing...' : '🎰 Run prize draw'}
           </button>
+          )}
           <button onClick={openEdit} style={{ padding: '11px 18px', background: '#f3f4f6', border: 'none', borderRadius: '8px', color: '#333', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>✏️ Edit promotion</button>
         </div>
 
@@ -416,6 +420,7 @@ export default function PromoterPage() {
         <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: '16px 20px', marginBottom: '24px' }}>
           <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '4px' }}>Daily draws and winners</div>
           <div style={{ color: '#888', fontSize: '12px', marginBottom: '14px' }}>Draws from approved entries submitted on the chosen day (Uganda time). Verify each winning bill with the establishment before paying the prize.</div>
+          {canDraw ? (<>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '12px' }}>
             <label style={{ fontSize: '12px', color: '#555' }}>Day<br /><input type="date" value={dailyDay} onChange={e => setDailyDay(e.target.value)} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px' }} /></label>
             <label style={{ fontSize: '12px', color: '#555' }}>Winners<br /><input type="number" min={1} max={20} value={dailyCount} onChange={e => setDailyCount(parseInt(e.target.value, 10) || 1)} style={{ padding: '9px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', width: '80px' }} /></label>
@@ -423,6 +428,7 @@ export default function PromoterPage() {
             <button onClick={() => runDaily(false)} disabled={dailyBusy} style={{ padding: '11px 18px', background: '#7c3aed', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>{dailyBusy ? 'Working...' : 'Run daily draw'}</button>
           </div>
           <label style={{ display: 'block', fontSize: '13px', color: '#374151', marginBottom: '10px' }}><input type="checkbox" checked={onePerPhone} onChange={e => setOnePerPhone(e.target.checked)} /> One prize per phone number (leave unticked to allow repeat winners)</label>
+          </>) : (<div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px', fontSize: '13px', color: '#555', marginBottom: '12px' }}>Draws for this promotion are run by the administrator. Winners appear below once drawn.</div>)}
           {dailyMsg && <div style={{ fontSize: '13px', color: '#374151', marginBottom: '10px' }}>{dailyMsg}</div>}
           {winnersList.length === 0 ? <div style={{ color: '#9ca3af', fontSize: '13px' }}>No daily winners yet.</div> : winnersList.map((w: any) => (
             <div key={w.id} style={{ borderTop: '1px solid #f1f1f1', padding: '12px 0', fontSize: '13px' }}>
@@ -434,11 +440,11 @@ export default function PromoterPage() {
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                 <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: w.winner_status === 'verified' ? '#dcfce7' : w.winner_status === 'failed' ? '#fee2e2' : '#fef3c7', color: w.winner_status === 'verified' ? '#166534' : w.winner_status === 'failed' ? '#991b1b' : '#92400e' }}>{w.winner_status === 'verified' ? 'Verified' : w.winner_status === 'failed' ? 'Failed' : 'To verify'}</span>
                 {w.prize_status === 'paid' && <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, background: '#dbeafe', color: '#1e40af' }}>Paid{w.payment_ref ? ' (' + w.payment_ref + ')' : ''}</span>}
-                {w.winner_status === 'pending' && <>
+                {canDraw && w.winner_status === 'pending' && <>
                   <button disabled={dailyBusy} onClick={() => winnerAction(w.id, 'verify', 'Who at the bar confirmed the bill? (optional note)')} style={{ padding: '7px 12px', border: '1px solid #16a34a', background: 'white', color: '#166534', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>Verified</button>
                   <button disabled={dailyBusy} onClick={() => { if (confirm('Mark this winner as failed and draw a replacement?')) winnerAction(w.id, 'fail', 'Reason (optional note)') }} style={{ padding: '7px 12px', border: '1px solid #dc2626', background: 'white', color: '#991b1b', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>Failed, redraw</button>
                 </>}
-                {w.winner_status === 'verified' && w.prize_status !== 'paid' && <button disabled={dailyBusy} onClick={() => winnerAction(w.id, 'paid', 'Payment reference (airtime or mobile money ref)')} style={{ padding: '7px 12px', border: '1px solid #2563eb', background: 'white', color: '#1e40af', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>Mark paid</button>}
+                {canDraw && w.winner_status === 'verified' && w.prize_status !== 'paid' && <button disabled={dailyBusy} onClick={() => winnerAction(w.id, 'paid', 'Payment reference (airtime or mobile money ref)')} style={{ padding: '7px 12px', border: '1px solid #2563eb', background: 'white', color: '#1e40af', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>Mark paid</button>}
               </div>
               {w.verification_note && <div style={{ color: '#888', fontSize: '12px', marginTop: '4px' }}>Note: {w.verification_note}</div>}
             </div>
