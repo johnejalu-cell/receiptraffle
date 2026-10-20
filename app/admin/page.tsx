@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import AdminDraws from './AdminDraws'
 
 const TIER_RATES: Record<string, {label: string, standard: number, emerging: number}> = {
   starter: { label: 'Starter (up to 500/mo)', standard: 129, emerging: 51 },
@@ -191,9 +192,13 @@ export default function AdminPage() {
     setReceiptModal({ url, name: entry.customer_name })
   }
 
-  function checkPin() {
-    if (pin === '2580') { setAuthed(true); loadData() }
-    else { setPinError('Incorrect PIN') }
+  async function checkPin() {
+    try {
+      const res = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) { setAuthed(true); loadData() }
+      else { setPinError(data.error || 'Incorrect PIN') }
+    } catch { setPinError('Could not reach the server') }
   }
 
   async function loadData() {
@@ -642,32 +647,7 @@ export default function AdminPage() {
         )}
 
         {/* DRAWS */}
-        {tab === 'draws' && !loading && (
-          <div>
-            <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Prize draws</p>
-            <p style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>For individual promotion draws. For grand draws across multiple promotions, use the <button onClick={() => window.location.href='/admin/grand-draws'} style={{ background: 'none', border: 'none', color: '#7c3aed', cursor: 'pointer', fontWeight: 600, fontSize: 13, padding: 0, textDecoration: 'underline' }}>Grand Draws</button> section.</p>
-            {promotions.length === 0 && <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>No active promotions</div>}
-            {promotions.map(p => {
-              const eligible = entries.filter(e => e.promotion_id === p.id && e.verification_status === 'approved').length
-              return (
-                <div key={p.id} style={{ background: '#fff', border: '1px solid #e5e5e0', borderRadius: 14, padding: '1.25rem', marginBottom: 10 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{p.promo_name}</div>
-                  <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>{eligible} eligible entries · Draw: {p.draw_date}</div>
-                  {(winners[p.id] || []).map((w, i) => (
-                    <div key={i} style={{ background: '#E1F5EE', borderRadius: 10, padding: '10px 14px', marginBottom: 8 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#085041' }}>{String.fromCodePoint(0x1f3c6)} Winner #{i+1}: {w.name}</div>
-                      <div style={{ fontSize: 11, color: '#0F6E56' }}>{w.time}</div>
-                    </div>
-                  ))}
-                  <button onClick={() => runDraw(p.id, p.promo_name)} disabled={drawingId === p.id || eligible === 0}
-                    style={{ width: '100%', padding: '10px', background: drawingId === p.id ? '#9BA4B5' : eligible === 0 ? '#ddd' : '#534AB7', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: drawingId === p.id || eligible === 0 ? 'not-allowed' : 'pointer' }}>
-                    {drawingId === p.id ? 'Drawing...' : eligible === 0 ? 'No eligible entries' : '🎲 Run draw'}
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        )}
+        {tab === 'draws' && !loading && <AdminDraws promotions={promotions} entries={entries} pin={pin} />}
 
         {/* FEES */}
         {tab === 'fees' && !loading && (
