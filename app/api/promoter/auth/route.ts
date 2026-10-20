@@ -22,7 +22,20 @@ export async function POST(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     if (!data || data.length === 0) return NextResponse.json({ error: 'Invalid email or PIN' }, { status: 401 })
 
-    return NextResponse.json({ success: true, promotions: data })
+    // Admin-controlled switches. Read separately so login still works if the columns do not exist yet.
+    let promotions: any[] = data
+    try {
+      const { data: flags, error: flagErr } = await supabase
+        .from('promotion_submissions')
+        .select('id, promoter_draw_enabled, require_age_confirmation')
+        .in('id', data.map((d: any) => d.id))
+      if (!flagErr && flags) {
+        const m = new Map<string, any>(flags.map((f: any) => [f.id, f]))
+        promotions = data.map((d: any) => ({ ...d, ...(m.get(d.id) || {}) }))
+      }
+    } catch { /* ignore */ }
+
+    return NextResponse.json({ success: true, promotions })
   } catch (err: unknown) {
     return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status: 500 })
   }
