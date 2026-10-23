@@ -12,6 +12,22 @@ interface Content {
   biz_cta_title?: string
   biz_cta_subtitle?: string
   contact_email?: string
+  biz_pricing_note?: string
+  tier_starter_standard?: string
+  tier_starter_emerging?: string
+  tier_growth_standard?: string
+  tier_growth_emerging?: string
+  tier_professional_standard?: string
+  tier_professional_emerging?: string
+  tier_enterprise_standard?: string
+  tier_enterprise_emerging?: string
+  tier_overage?: string
+}
+
+type TierKey = 'starter' | 'growth' | 'professional' | 'enterprise'
+const FREE_ENTRIES = 500
+const TIER_DEFAULTS: Record<TierKey, [string, string]> = {
+  starter: ['129', '51'], growth: ['259', '103'], professional: ['454', '181'], enterprise: ['779', '311'],
 }
 
 const DEFAULTS: Content = {
@@ -38,19 +54,28 @@ export default function ForBusinessPage() {
 
   const c = content
 
+  // Rates are set in Admin > Fees; these defaults only apply if they cannot be loaded.
+  const num = (v: string | undefined, d: string) => { const n = parseFloat(String(v ?? '')); return Number.isFinite(n) ? n : parseFloat(d) }
+  const usd = (n: number) => '$' + Math.round(n).toLocaleString('en-US')
+  const rate = (tier: TierKey, region: 'standard' | 'emerging') =>
+    num(c[('tier_' + tier + '_' + region) as keyof Content], TIER_DEFAULTS[tier][region === 'standard' ? 0 : 1])
+  const overage = num(c.tier_overage, '10')
+  const total = (tier: TierKey, region: 'standard' | 'emerging', months: number, entries: number) =>
+    rate(tier, region) * months + Math.max(0, entries - FREE_ENTRIES) * overage / 1000
+
   const tiers = [
-    { name: 'Starter', entries: 'Up to 500', standard: '$129', emerging: '$51' },
-    { name: 'Growth', entries: 'Up to 2,000', standard: '$259', emerging: '$103' },
-    { name: 'Professional', entries: 'Up to 5,000', standard: '$454', emerging: '$181' },
-    { name: 'Enterprise', entries: 'Up to 20,000', standard: '$779', emerging: '$311' },
+    { name: 'Starter', entries: 'Up to 500', standard: usd(rate('starter', 'standard')), emerging: usd(rate('starter', 'emerging')) },
+    { name: 'Growth', entries: 'Up to 2,000', standard: usd(rate('growth', 'standard')), emerging: usd(rate('growth', 'emerging')) },
+    { name: 'Professional', entries: 'Up to 5,000', standard: usd(rate('professional', 'standard')), emerging: usd(rate('professional', 'emerging')) },
+    { name: 'Enterprise', entries: 'Up to 20,000', standard: usd(rate('enterprise', 'standard')), emerging: usd(rate('enterprise', 'emerging')) },
     { name: 'Custom', entries: '20,000+', standard: 'Contact us', emerging: 'Contact us' },
   ]
 
   const examples = [
-    { name: 'Small local promotion', detail: 'Starter · Emerging · 1 month · 200 entries', total: '$51' },
-    { name: 'Regional campaign', detail: 'Growth · Emerging · 2 months · 1,500 entries', total: '$216' },
-    { name: 'National promotion', detail: 'Professional · Standard · 3 months · 4,000 entries', total: '$1,397' },
-    { name: 'Large FMCG brand', detail: 'Enterprise · Standard · 6 months · 15,000 entries', total: '$4,819' },
+    { name: 'Small local promotion', detail: 'Starter · Emerging · 1 month · 200 entries', total: usd(total('starter', 'emerging', 1, 200)) },
+    { name: 'Regional campaign', detail: 'Growth · Emerging · 2 months · 1,500 entries', total: usd(total('growth', 'emerging', 2, 1500)) },
+    { name: 'National promotion', detail: 'Professional · Standard · 3 months · 4,000 entries', total: usd(total('professional', 'standard', 3, 4000)) },
+    { name: 'Large FMCG brand', detail: 'Enterprise · Standard · 6 months · 15,000 entries', total: usd(total('enterprise', 'standard', 6, 15000)) },
   ]
 
   return (
@@ -171,12 +196,14 @@ export default function ForBusinessPage() {
           <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '20px 24px', marginBottom: '32px' }}>
             <div style={{ fontWeight: 700, fontSize: '15px', color: '#92400e', marginBottom: '8px' }}>⚡ AI verification cost</div>
             <p style={{ color: '#78350f', fontSize: '14px', lineHeight: 1.6, margin: '0 0 8px' }}>
-              The first 500 entries are included free on all tiers. Beyond that, AI verification is charged at <strong>$10 per 1,000 entries</strong> — billed monthly based on actual usage.
+              The first 500 entries are included free on all tiers. Beyond that, AI verification is charged at <strong>${overage} per 1,000 entries</strong> — billed monthly based on actual usage.
             </p>
             <p style={{ color: '#78350f', fontSize: '13px', margin: 0, opacity: 0.8 }}>
               If your promotion receives fewer entries than your budget, you only pay for actual verifications. No minimum overage charge.
             </p>
           </div>
+
+          {c.biz_pricing_note ? <p style={{ color: '#666', fontSize: '13px', margin: '0 0 32px', lineHeight: 1.6 }}>{c.biz_pricing_note}</p> : null}
 
           {/* Example costs */}
           <div style={{ background: 'white', borderRadius: '16px', padding: '32px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '20px' }}>
