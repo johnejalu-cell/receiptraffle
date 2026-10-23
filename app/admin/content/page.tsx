@@ -51,7 +51,6 @@ const FIELDS: { key: keyof Content; label: string; section: string; multiline?: 
   { key: 'biz_solution_title', label: 'Solution section title', section: 'For Business page' },
   { key: 'biz_pricing_title', label: 'Pricing section title', section: 'For Business page' },
   { key: 'biz_pricing_subtitle', label: 'Pricing subtitle', section: 'For Business page' },
-  { key: 'biz_pricing_amount', label: 'Price displayed', section: 'For Business page' },
   { key: 'biz_pricing_note', label: 'Pricing footnote', section: 'For Business page' },
   { key: 'biz_cta_title', label: 'Call to action title', section: 'For Business page' },
   { key: 'biz_cta_subtitle', label: 'Call to action subtitle', section: 'For Business page', multiline: true },
@@ -165,6 +164,7 @@ export default function AdminContentPage() {
               <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#1D9E75', marginBottom: '20px', paddingBottom: '10px', borderBottom: '2px solid #f0fdf4' }}>
                 {section === 'Homepage' ? '🏠' : '🏢'} {section}
               </h2>
+              {section !== 'Homepage' && <p style={{ fontSize: '13px', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px', margin: '-8px 0 18px' }}>Tier prices and the example costs on this page follow the rates you set in Admin → Fees. Change them there.</p>}
               {FIELDS.filter(f => f.section === section).map(field => (
                 <div key={field.key} style={{ marginBottom: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
