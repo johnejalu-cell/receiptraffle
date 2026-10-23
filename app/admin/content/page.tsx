@@ -67,11 +67,12 @@ export default function AdminContentPage() {
   const [saveMsg, setSaveMsg] = useState('')
   const [error, setError] = useState('')
 
-  const adminPin = process.env.NEXT_PUBLIC_ADMIN_PIN || '1234'
-
-  const login = () => {
-    if (pin === adminPin) { setAuthed(true); loadContent() }
-    else setError('Incorrect PIN')
+  const login = async () => {
+    try {
+      const res = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) { setAuthed(true); loadContent() } else setError(data.error || 'Incorrect PIN')
+    } catch { setError('Could not reach the server') }
   }
 
   const loadContent = async () => {
