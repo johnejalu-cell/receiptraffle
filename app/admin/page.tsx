@@ -368,7 +368,7 @@ export default function AdminPage() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={loadData} style={{ background: 'none', border: '1px solid #444', borderRadius: 8, padding: '5px 12px', color: '#9BA4B5', fontSize: 12, cursor: 'pointer' }}>↻ Refresh</button>
-          <button onClick={() => setAuthed(false)} style={{ background: 'none', border: '1px solid #444', borderRadius: 8, padding: '5px 12px', color: '#9BA4B5', fontSize: 12, cursor: 'pointer' }}>Sign out</button>
+          <button onClick={async () => { await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ logout: true }) }).catch(() => null); setAuthed(false) }} style={{ background: 'none', border: '1px solid #444', borderRadius: 8, padding: '5px 12px', color: '#9BA4B5', fontSize: 12, cursor: 'pointer' }}>Sign out</button>
         </div>
       </div>
 
