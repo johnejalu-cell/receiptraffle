@@ -43,10 +43,13 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const promotions = data.map((p: any) => ({
-      ...p,
-      entries_count: countMap[p.id] || 0,
-    }))
+    // Private columns (promoter PIN, emails, phones, payment details, notes) must never reach the public.
+    const PRIVATE = /pin|email|phone|password|secret|token|contact|payment|bank|invoice|mobile|whatsapp|address|admin|note/i
+    const promotions = data.map((p: any) => {
+      const publicFields: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(p)) if (!PRIVATE.test(k)) publicFields[k] = v
+      return { ...publicFields, entries_count: countMap[p.id] || 0 }
+    })
 
     return NextResponse.json({ promotions })
   } catch (err: unknown) {
