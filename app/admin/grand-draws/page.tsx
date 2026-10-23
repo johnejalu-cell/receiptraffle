@@ -56,11 +56,12 @@ export default function AdminGrandDrawsPage() {
     name: '', prize_description: '', prize_value_usd: '', draw_date: ''
   })
 
-  const adminPin = process.env.NEXT_PUBLIC_ADMIN_PIN || '1234'
-
-  const login = () => {
-    if (pin === adminPin) { setAuthed(true); loadData() }
-    else setPinError('Incorrect PIN')
+  const login = async () => {
+    try {
+      const res = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) { setAuthed(true); loadData() } else setPinError(data.error || 'Incorrect PIN')
+    } catch { setPinError('Could not reach the server') }
   }
 
   const loadData = async () => {
