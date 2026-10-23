@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 const SUPABASE_URL = 'https://qnpjawyeekhkzvrorqyv.supabase.co'
 
 const CONTENT_KEYS = [
