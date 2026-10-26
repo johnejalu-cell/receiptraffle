@@ -45,7 +45,7 @@ interface EntryResult {
   currency?: string
 }
 
-type Step = 'upload' | 'details' | 'verifying' | 'success' | 'manual' | 'duplicate' | 'error'
+type Step = 'upload' | 'details' | 'verifying' | 'success' | 'manual' | 'duplicate' | 'rejected' | 'error'
 
 const MAX_PDF_BYTES = 3 * 1024 * 1024 // stays under Vercel's 4.5 MB body limit after base64
 
@@ -77,6 +77,7 @@ export default function EnterPage() {
   const [termsModal, setTermsModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [duplicateMessage, setDuplicateMessage] = useState('')
+  const [rejectMessage, setRejectMessage] = useState('')
   const [ageOk, setAgeOk] = useState(false)
 
   useEffect(() => {
@@ -232,6 +233,12 @@ export default function EnterPage() {
         return
       }
 
+      if (res.status === 422 && data.error === 'product_not_found') {
+        setRejectMessage(typeof data.message === 'string' ? data.message : '')
+        setStep('rejected')
+        return
+      }
+
       if (!res.ok || data.error || !data.ticketNumber) {
         throw new Error(typeof data.error === 'string' ? data.error : 'Something went wrong (' + res.status + ')')
       }
@@ -305,6 +312,25 @@ export default function EnterPage() {
         <div style={{ fontSize: 13, color: '#0F6E56', lineHeight: 1.7 }}>
           ✓ Use a different receipt from a new purchase<br />
           ✓ Use this receipt to enter a promotion for a different brand
+        </div>
+      </div>
+      <button onClick={resetReceipt} style={primaryBtn}>Try a different receipt</button>
+      <Link href="/" style={backLink}>← Browse other promotions</Link>
+    </main>
+  )
+
+  if (step === 'rejected') return (
+    <main style={centerMain}>
+      <div style={{ fontSize: 56, marginBottom: 16 }}>🧾</div>
+      <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8, color: '#791F1F' }}>Receipt not accepted</h2>
+      <div style={redBox}>
+        {rejectMessage || 'We could not find the promoted product on this receipt. Only receipts that include the promoted product can enter.'}
+      </div>
+      <div style={greenBox}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#085041', marginBottom: 6 }}>What you can do:</div>
+        <div style={{ fontSize: 13, color: '#0F6E56', lineHeight: 1.7 }}>
+          ✓ Use a receipt that shows the promoted product<br />
+          ✓ If it is on your receipt, retake a clearer photo showing the whole receipt
         </div>
       </div>
       <button onClick={resetReceipt} style={primaryBtn}>Try a different receipt</button>
