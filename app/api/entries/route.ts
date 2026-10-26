@@ -243,6 +243,37 @@ function duplicateResponse(block: BlockInfo) {
   }, { status: 409 })
 }
 
+// Tolerant matching: does a printed receipt line reasonably represent (or contain part of) the promoted product?
+// Receipt printers truncate names, drop vowels and merge words, e.g. "FORT GLD 1L" for "Fortune Gold".
+function normLoose(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function isAbbreviation(short: string, full: string): boolean {
+  if (short.length < 3 || short.length > full.length) return false
+  if (full.startsWith(short)) return true                 // truncated: "fort" for "fortune"
+  if (short[0] !== full[0]) return false
+  let j = 0                                               // vowels dropped: "frtn" for "fortune", "gld" for "gold"
+  for (const ch of full) {
+    if (ch === short[j]) j++
+    if (j === short.length) break
+  }
+  return j === short.length
+}
+
+function looseMatch(item: string, keyword: string): boolean {
+  const keyTokens = normLoose(keyword).split(' ').filter(t => t.length >= 3)
+  if (keyTokens.length === 0) return false
+  const itemNorm = normLoose(item)
+  const itemTokens = itemNorm.split(' ').filter(Boolean)
+  const itemCompact = itemNorm.replace(/ /g, '')
+  return keyTokens.some(kt =>
+    itemCompact.includes(kt) ||
+    itemCompact.includes(kt.slice(0, 4)) ||
+    itemTokens.some(it => isAbbreviation(it, kt))
+  )
+}
+
 function buildPrompt(keywords: string[], barcodes: string[], minSpend: number, currency: string): string {
   const barcodeNote = barcodes.length > 0
     ? '\nBARCODE CHECK: Also look for these product barcodes on the receipt: ' + barcodes.join(', ')
@@ -271,6 +302,9 @@ function buildPrompt(keywords: string[], barcodes: string[], minSpend: number, c
       + '- Use fuzzy matching: if the first few letters of the brand appear on the receipt, count it as a match\n'
       + '- Look for the brand name anywhere on the receipt as a store name, product name, or line item\n'
       + '- The brand name may be abbreviated or partially visible, be generous in matching\n'
+      + '- Receipts often print product names truncated, abbreviated, with vowels removed, misspelled, or joined to a size (for example "FORT GLD 1L" for "Fortune Gold 1 Litre", or "NILE SP 500ML" for "Nile Special"). Count a line as a match if it is a reasonable representation of, or part of, the brand/product name. Only treat a line as a different product when it is clearly something else.\n'
+      + '- List every matching line exactly as it is printed on the receipt\n'
+      + '- Also list every product line on the receipt exactly as printed (receipt_items)\n'
       + '- Report the store/retailer name exactly as shown\n'
       + '- Report the purchase date in YYYY-MM-DD format\n'
       + '- Report the receipt/invoice/transaction number if one is printed\n'
@@ -278,7 +312,9 @@ function buildPrompt(keywords: string[], barcodes: string[], minSpend: number, c
       + '- Add up the total spent on matching items only'
       + barcodeNote + '\n\n'
       + jsonShape(
-        '  "promoted_items_found": ["item1", "item2"],\n',
+        '  "promoted_items_found": ["item1", "item2"],\n'
+        + '  "product_on_receipt": true if any line is reasonably the promoted product (even abbreviated), otherwise false,\n'
+        + '  "receipt_items": ["every product line exactly as printed"],\n',
         '  "promoted_items_total": total of matching items as a plain number,\n',
         '  "barcode_found": true or false,\n'
       )
@@ -410,7 +446,7 @@ export async function POST(req: NextRequest) {
 
         const response = await anthropic.messages.create({
           model: AI_MODEL,
-          max_tokens: 800,
+          max_tokens: 1600,
           messages: [{ role: 'user', content: [fileBlock, { type: 'text', text: prompt }] }],
         })
 
@@ -441,6 +477,18 @@ export async function POST(req: NextRequest) {
         const meetsMinimum = amountToCheck >= minSpendNum
         const hasItems = keywords.length === 0 || matchedItems.length > 0
         const isReadable = confidence >= 40
+
+        // Reject receipts that clearly do not contain the promoted product: the receipt was readable,
+        // and neither a keyword nor a barcode matched. Nothing is saved and no ticket is issued.
+        // Every other problem (unreadable, below minimum spend, AI unavailable) still goes to manual review as before.
+        const receiptItems = toStringArray(parsed.receipt_items)
+        const looksPresent = parsed.product_on_receipt === true || receiptItems.some(item => keywords.some(kw => looseMatch(item, kw)))
+        if (keywords.length > 0 && isReadable && matchedItems.length === 0 && parsed.barcode_found !== true && !looksPresent) {
+          return NextResponse.json({
+            error: 'product_not_found',
+            message: 'We could not find ' + keywords.join(' or ') + ' on this receipt. Only receipts that include the promoted product can enter.',
+          }, { status: 422 })
+        }
 
         const base: AiResult = {
           verification_status: 'manual_review',
